@@ -27,12 +27,25 @@
 - 支持 x86_64 和 ARM64 架构
 - 注意：目前仅支持获取MAC地址
 
-## 安装说明
+## 下载和安装
 
-1. 从下载页面选择对应平台的安装包
-2. 运行安装程序，按提示完成安装
-3. 启动应用，点击"开启授权"按钮
-4. 工具将自动启动本地服务（端口18888）
+### Windows用户
+1. 下载 `machine-code-tool-windows.exe`
+2. 双击运行即可
+
+### macOS用户
+1. 下载文件（可能显示为 `machine-code-tool-macos` 或 `machine-code-tool-macos.zip`）
+2. 如果是ZIP文件，解压后得到 `.app` 应用包
+3. 右键点击 `.app` 文件 → 选择"打开"（首次运行需要）
+4. 程序启动后，浏览器访问 `http://localhost:18888`
+
+**macOS下载提示**: Safari可能自动解压ZIP文件，如果下载的文件没有后缀，请检查是否为 `.app` 应用包
+
+### Linux/麒麟用户
+1. 下载 `machine-code-tool-kylin`
+2. 添加执行权限：`chmod +x machine-code-tool-kylin`
+3. 运行：`./machine-code-tool-kylin`
+4. 浏览器访问 `http://localhost:18888`
 
 ## API接口
 

@@ -218,6 +218,20 @@ jobs:
           fi
         done
         
+        # 处理macOS .app目录
+        for app_dir in machine-code-tool-*.app; do
+          if [ -d "$app_dir" ]; then
+            echo "处理macOS应用包: $app_dir"
+            cp -r "$app_dir" "release/$app_dir"
+            
+            # 创建macOS专用的ZIP包，避免浏览器自动解压
+            cd release
+            zip -r "${app_dir}-macOS.zip" "$app_dir"
+            echo "✅ 已创建macOS专用ZIP: ${app_dir}-macOS.zip"
+            cd ..
+          fi
+        done
+        
         # 创建使用说明
         cat > release/README.txt << 'EOF'
         🚀 机器码获取工具 - 使用说明
