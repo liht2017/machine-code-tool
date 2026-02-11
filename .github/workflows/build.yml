@@ -16,6 +16,7 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false  # 不因为一个平台失败而取消其他平台
       matrix:
         include:
           - os: windows-latest
@@ -62,17 +63,68 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
+        sudo apt-get install -y build-essential curl wget libssl-dev pkg-config
         # Try webkit2gtk-4.1 first (Ubuntu 24.04+), fallback to 4.0 (older versions)
         sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
-        sudo apt-get install -y build-essential curl wget libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+        sudo apt-get install -y libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+        # Additional dependencies that might be needed
+        sudo apt-get install -y libjavascriptcoregtk-4.1-dev libsoup-3.0-dev || sudo apt-get install -y libjavascriptcoregtk-4.0-dev libsoup2.4-dev
+
+    - name: 缓存Tauri CLI
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/bin/cargo-tauri
+        key: ${{ runner.os }}-tauri-cli-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-tauri-cli-
 
     - name: 安装Tauri CLI
-      run: cargo install tauri-cli
+      run: |
+        if ! command -v cargo-tauri &> /dev/null; then
+          echo "Installing Tauri CLI..."
+          cargo install tauri-cli --locked
+        else
+          echo "Tauri CLI already installed"
+          cargo tauri --version
+        fi
 
     - name: 构建
       run: |
         cd src-tauri
-        cargo tauri build --target ${{ matrix.target }}
+        echo "开始Tauri构建..."
+        echo "目标平台: ${{ matrix.target }}"
+        echo "当前目录: $(pwd)"
+        echo "Rust版本: $(rustc --version)"
+        echo "Cargo版本: $(cargo --version)"
+        echo "Tauri版本: $(cargo tauri --version)"
+        
+        # 对于Linux，只构建可执行文件，不打包
+        if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+          echo "Linux构建：只生成可执行文件，跳过AppImage打包"
+          cargo tauri build --target ${{ matrix.target }} --bundles none --verbose
+        else
+          echo "其他平台构建：生成完整包"
+          cargo tauri build --target ${{ matrix.target }} --verbose
+        fi
+        
+        # 检查构建结果
+        echo "构建完成，检查输出文件..."
+        find target -name "machine-code-tool*" -type f || echo "未找到构建产物"
+
+    - name: 构建失败时的调试信息
+      if: failure()
+      run: |
+        echo "构建失败，收集调试信息..."
+        echo "=== 系统信息 ==="
+        uname -a || echo "无法获取系统信息"
+        echo "=== 环境变量 ==="
+        env | grep -E "(RUST|CARGO|PATH)" || echo "无法获取环境变量"
+        echo "=== 磁盘空间 ==="
+        df -h || echo "无法获取磁盘信息"
+        echo "=== 构建日志 ==="
+        if [ -f "src-tauri/target/${{ matrix.target }}/release/build/*/out/build.log" ]; then
+          cat src-tauri/target/${{ matrix.target }}/release/build/*/out/build.log
+        fi
 
     - name: 查找构建文件
       run: |
