@@ -38,14 +38,25 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: 安装Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
-        target: ${{ matrix.target }}
-        override: true
+        targets: ${{ matrix.target }}
+
+    - name: 缓存Cargo
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          src-tauri/target
+        key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-${{ matrix.target }}-
+          ${{ runner.os }}-cargo-
 
     - name: 安装Linux依赖
       if: matrix.os == 'ubuntu-latest'
@@ -62,7 +73,7 @@ jobs:
         cargo build --release --target ${{ matrix.target }}
 
     - name: 上传构建产物
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.asset_name }}
         path: src-tauri/target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
@@ -72,7 +83,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: 下载所有构建产物
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
+      with:
+        pattern: machine-code-tool-*
+        merge-multiple: true
       
     - name: 整理文件
       run: |
@@ -81,7 +95,7 @@ jobs:
         ls -la release/
         
     - name: 上传最终产物
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: all-platforms-${{ github.run_number }}
         path: release/
