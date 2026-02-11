@@ -148,6 +148,9 @@ jobs:
             cp "upload/${{ matrix.asset_name }}" "upload/$APP_NAME/Contents/MacOS/machine-code-tool"
             chmod +x "upload/$APP_NAME/Contents/MacOS/machine-code-tool"
             
+            # 删除原始可执行文件，只保留.app包
+            rm "upload/${{ matrix.asset_name }}"
+            
             # 创建Info.plist (使用echo避免heredoc语法问题)
             echo '<?xml version="1.0" encoding="UTF-8"?>' > "upload/$APP_NAME/Contents/Info.plist"
             echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> "upload/$APP_NAME/Contents/Info.plist"

@@ -197,11 +197,15 @@ async fn start_http_server(state: Arc<Mutex<AppState>>) {
         .and(warp::get())
         .map(|| warp::reply::json(&"OK"));
 
+    // 添加UTF-8编码头
+    let utf8_header = warp::reply::with::header("content-type", "application/json; charset=utf-8");
+    
     let routes = machine_code
         .or(auth_status)
         .or(set_auth)
         .or(health)
-        .with(cors);
+        .with(cors)
+        .with(utf8_header);
 
     // HTTP服务已启动: http://localhost:18888
     warp::serve(routes)

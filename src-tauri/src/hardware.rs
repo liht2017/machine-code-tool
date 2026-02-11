@@ -178,18 +178,54 @@ async fn get_windows_disk_serial() -> Result<String> {
 
 #[cfg(target_os = "macos")]
 async fn get_macos_motherboard_serial() -> Result<String> {
+    // 方法1：尝试获取硬件UUID
     let output = Command::new("system_profiler")
-        .args(&["SPHardwareDataType"])
+        .args(&["SPHardwareDataType", "-detailLevel", "basic"])
         .output()?;
     
     let output_str = String::from_utf8_lossy(&output.stdout);
+    
+    // 查找Hardware UUID（更可靠）
+    for line in output_str.lines() {
+        if line.trim().starts_with("Hardware UUID:") {
+            let uuid = line.split(':').nth(1)
+                .ok_or_else(|| anyhow!("解析UUID失败"))?
+                .trim().to_string();
+            if !uuid.is_empty() {
+                return Ok(uuid);
+            }
+        }
+    }
+    
+    // 方法2：如果没有UUID，尝试获取序列号
     for line in output_str.lines() {
         if line.trim().starts_with("Serial Number:") {
             let serial = line.split(':').nth(1)
                 .ok_or_else(|| anyhow!("解析序列号失败"))?
                 .trim().to_string();
-            if !serial.is_empty() {
+            if !serial.is_empty() && serial != "(system)" {
                 return Ok(serial);
+            }
+        }
+    }
+    
+    // 方法3：使用ioreg命令获取主板序列号
+    let ioreg_output = Command::new("ioreg")
+        .args(&["-c", "IOPlatformExpertDevice", "-d", "2"])
+        .output()?;
+    
+    let ioreg_str = String::from_utf8_lossy(&ioreg_output.stdout);
+    for line in ioreg_str.lines() {
+        if line.contains("IOPlatformSerialNumber") {
+            if let Some(start) = line.find('"') {
+                if let Some(end) = line.rfind('"') {
+                    if start != end {
+                        let serial = &line[start+1..end];
+                        if !serial.is_empty() {
+                            return Ok(serial.to_string());
+                        }
+                    }
+                }
             }
         }
     }
