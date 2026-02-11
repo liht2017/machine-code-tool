@@ -5,7 +5,6 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use warp::Filter;
-use serde::Deserialize;
 
 mod hardware;
 mod config;

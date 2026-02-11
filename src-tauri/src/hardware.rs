@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+#[cfg(windows)]
 use std::process::Command;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -10,10 +11,8 @@ fn create_hidden_command(program: &str) -> Command {
     cmd
 }
 use anyhow::{Result, anyhow};
-use log::{info, warn, error};
+use log::{info, warn};
 use sha2::{Sha256, Digest};
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MachineInfo {
