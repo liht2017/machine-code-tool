@@ -102,35 +102,33 @@ jobs:
             cp "upload/${{ matrix.asset_name }}" "upload/$APP_NAME/Contents/MacOS/machine-code-tool"
             chmod +x "upload/$APP_NAME/Contents/MacOS/machine-code-tool"
             
-            # 创建Info.plist
-            cat > "upload/$APP_NAME/Contents/Info.plist" << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>machine-code-tool</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.xinyu.machine-code-tool</string>
-    <key>CFBundleName</key>
-    <string>机器码获取工具</string>
-    <key>CFBundleDisplayName</key>
-    <string>机器码获取工具</string>
-    <key>CFBundleVersion</key>
-    <string>2.1.0</string>
-    <key>CFBundleShortVersionString</key>
-    <string>2.1.0</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>10.13</string>
-    <key>NSHighResolutionCapable</key>
-    <true/>
-    <key>LSUIElement</key>
-    <false/>
-</dict>
-</plist>
-EOF
+            # 创建Info.plist (使用echo避免heredoc语法问题)
+            echo '<?xml version="1.0" encoding="UTF-8"?>' > "upload/$APP_NAME/Contents/Info.plist"
+            echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '<plist version="1.0">' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '<dict>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <key>CFBundleExecutable</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <string>machine-code-tool</string>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <key>CFBundleIdentifier</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <string>com.xinyu.machine-code-tool</string>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <key>CFBundleName</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <string>机器码获取工具</string>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <key>CFBundleDisplayName</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <string>机器码获取工具</string>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <key>CFBundleVersion</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <string>2.1.0</string>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <key>CFBundleShortVersionString</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <string>2.1.0</string>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <key>CFBundlePackageType</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <string>APPL</string>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <key>LSMinimumSystemVersion</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <string>10.13</string>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <key>NSHighResolutionCapable</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <true/>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <key>LSUIElement</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <false/>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '</dict>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '</plist>' >> "upload/$APP_NAME/Contents/Info.plist"
             
             echo "✅ 已创建macOS应用包: $APP_NAME"
             ls -la "upload/$APP_NAME/Contents/MacOS/"
