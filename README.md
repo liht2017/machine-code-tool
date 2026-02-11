@@ -29,23 +29,12 @@
 
 ## 下载和安装
 
-### Windows用户
-1. 下载 `machine-code-tool-windows.exe`
-2. 双击运行即可
-
-### macOS用户
-1. 下载文件（可能显示为 `machine-code-tool-macos` 或 `machine-code-tool-macos.zip`）
-2. 如果是ZIP文件，解压后得到 `.app` 应用包
-3. 右键点击 `.app` 文件 → 选择"打开"（首次运行需要）
-4. 程序启动后，浏览器访问 `http://localhost:18888`
-
-**macOS下载提示**: Safari可能自动解压ZIP文件，如果下载的文件没有后缀，请检查是否为 `.app` 应用包
-
-### Linux/麒麟用户
-1. 下载 `machine-code-tool-kylin`
-2. 添加执行权限：`chmod +x machine-code-tool-kylin`
-3. 运行：`./machine-code-tool-kylin`
-4. 浏览器访问 `http://localhost:18888`
+### 使用方法
+1. 下载对应平台的可执行文件
+2. Windows: 双击 `.exe` 文件运行
+3. macOS: 双击 `.app` 文件运行
+4. Linux: `chmod +x` 后运行
+5. 浏览器访问 `http://localhost:18888`
 
 ## API接口
 

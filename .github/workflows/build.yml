@@ -183,22 +183,6 @@ jobs:
             chmod -R 755 "upload/$APP_NAME"
             chmod +x "upload/$APP_NAME/Contents/MacOS/machine-code-tool"
             
-            # 创建macOS使用说明
-            echo "🍎 macOS 使用说明" > "upload/macOS-使用说明.txt"
-            echo "================" >> "upload/macOS-使用说明.txt"
-            echo "" >> "upload/macOS-使用说明.txt"
-            echo "如果遇到"应用已损坏"提示，请在终端运行：" >> "upload/macOS-使用说明.txt"
-            echo "" >> "upload/macOS-使用说明.txt"
-            echo "1. 移除隔离属性：" >> "upload/macOS-使用说明.txt"
-            echo "   sudo xattr -rd com.apple.quarantine machine-code-tool-macos.app" >> "upload/macOS-使用说明.txt"
-            echo "" >> "upload/macOS-使用说明.txt"
-            echo "2. 或临时禁用Gatekeeper：" >> "upload/macOS-使用说明.txt"
-            echo "   sudo spctl --master-disable" >> "upload/macOS-使用说明.txt"
-            echo "" >> "upload/macOS-使用说明.txt"
-            echo "3. 然后双击运行应用" >> "upload/macOS-使用说明.txt"
-            echo "" >> "upload/macOS-使用说明.txt"
-            echo "程序启动后访问：http://localhost:18888" >> "upload/macOS-使用说明.txt"
-            
             echo "✅ 已创建macOS应用包: $APP_NAME"
             ls -la "upload/$APP_NAME/Contents/MacOS/"
           fi
@@ -243,35 +227,8 @@ jobs:
           if [ -d "$app_dir" ]; then
             echo "处理macOS应用包: $app_dir"
             cp -r "$app_dir" "release/$app_dir"
-            
-            # 创建macOS专用的ZIP包，避免浏览器自动解压
-            cd release
-            zip -r "${app_dir}-macOS.zip" "$app_dir"
-            echo "✅ 已创建macOS专用ZIP: ${app_dir}-macOS.zip"
-            cd ..
           fi
         done
-        
-        # 创建使用说明
-        echo "🚀 机器码获取工具 - 使用说明" > release/README.txt
-        echo "================================" >> release/README.txt
-        echo "" >> release/README.txt
-        echo "📦 文件说明:" >> release/README.txt
-        echo "- machine-code-tool-windows.exe  → Windows系统 (双击运行)" >> release/README.txt
-        echo "- machine-code-tool-macos.app    → macOS系统 (双击运行)" >> release/README.txt
-        echo "- machine-code-tool-kylin        → 银河麒麟系统 (终端: ./machine-code-tool-kylin)" >> release/README.txt
-        echo "" >> release/README.txt
-        echo "🌐 访问界面:" >> release/README.txt
-        echo "程序启动后，打开浏览器访问: http://localhost:18888" >> release/README.txt
-        echo "" >> release/README.txt
-        echo "📋 API接口:" >> release/README.txt
-        echo "- GET  /api/machine-code  → 获取机器码" >> release/README.txt
-        echo "- GET  /api/auth-status   → 检查授权状态" >> release/README.txt
-        echo "- POST /api/set-auth      → 设置授权状态" >> release/README.txt
-        echo "" >> release/README.txt
-        echo "⚠️  macOS安全提示:" >> release/README.txt
-        echo "如果提示\"无法验证开发者\"，请到 系统偏好设置 → 安全性与隐私 → 点击\"仍要打开\"" >> release/README.txt
-        echo "如果提示\"应用已损坏\"，请在终端运行: sudo xattr -rd com.apple.quarantine machine-code-tool-macos.app" >> release/README.txt
         
         ls -la release/
       shell: bash
