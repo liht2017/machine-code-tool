@@ -1,0 +1,85 @@
+[package]
+name = "machine-code-tool"
+version = "2.1.0"
+description = "机器码获取工具 - 跨平台硬件信息获取"
+authors = ["Glodon Technology Co., Ltd."]
+license = "Proprietary"
+repository = ""
+default-run = "machine-code-tool"
+edition = "2021"
+rust-version = "1.60"
+
+[[bin]]
+name = "machine-code-tool"
+path = "src/main.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+tauri = { version = "2.0", features = [] }
+
+# Web服务框架
+tokio = { version = "1.0", features = ["full"] }
+warp = "0.3"
+
+# 系统信息获取
+sysinfo = "0.29"
+mac_address = "1.1"
+
+# 跨平台系统调用
+libc = "0.2"
+
+# 错误处理
+anyhow = "1.0"
+thiserror = "1.0"
+
+# 日志
+log = "0.4"
+env_logger = "0.10"
+
+# 配置文件
+config = "0.13"
+dirs = "5.0"
+
+# 加密
+sha2 = "0.10"
+hex = "0.4"
+
+# HTTP客户端
+reqwest = { version = "0.11", features = ["json"] }
+
+# 时间处理
+chrono = { version = "0.4", features = ["serde"] }
+
+# 浏览器打开
+webbrowser = "0.8"
+
+# Windows特定依赖
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = [
+    "winbase", "winreg", "winerror", "winnt", "processthreadsapi",
+    "handleapi", "sysinfoapi", "winuser", "shellapi"
+] }
+wmi = "0.13"
+
+# macOS特定依赖
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.9"
+system-configuration = "0.5"
+
+# Linux特定依赖 (银河麒麟)
+[target.'cfg(target_os = "linux")'.dependencies]
+nix = "0.27"
+
+[features]
+# by default Tauri runs in production mode
+# when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
+default = [ "custom-protocol" ]
+# this feature is used for production builds where `devPath` points to the filesystem
+# DO NOT remove this
+custom-protocol = [ "tauri/custom-protocol" ]
