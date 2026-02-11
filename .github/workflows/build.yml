@@ -98,7 +98,7 @@ jobs:
         # 对于Linux，只构建可执行文件，不打包
         if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
           echo "Linux构建：只生成可执行文件，跳过AppImage打包"
-          cargo tauri build --target ${{ matrix.target }} --bundles none --verbose
+          cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose
         else
           echo "其他平台构建：生成完整包"
           cargo tauri build --target ${{ matrix.target }} --verbose
