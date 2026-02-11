@@ -20,7 +20,7 @@ jobs:
         include:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: machine-code-tool-windows.exe
+            artifact_name: machine-code-tool.exe
             asset_name: machine-code-tool-windows.exe
           - os: macos-latest
             target: x86_64-apple-darwin
@@ -72,13 +72,32 @@ jobs:
     - name: 构建
       run: |
         cd src-tauri
-        cargo build --release --target ${{ matrix.target }}
+        cargo tauri build --target ${{ matrix.target }}
+
+    - name: 查找构建文件
+      run: |
+        echo "查找构建产物..."
+        find src-tauri/target -name "machine-code-tool*" -type f || true
+        ls -la src-tauri/target/${{ matrix.target }}/release/ || true
+      shell: bash
+
+    - name: 复制并重命名构建产物
+      run: |
+        mkdir -p upload
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool.exe upload/${{ matrix.asset_name }}
+        else
+          cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool upload/${{ matrix.asset_name }}
+          chmod +x upload/${{ matrix.asset_name }}
+        fi
+        ls -la upload/
+      shell: bash
 
     - name: 上传构建产物
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.asset_name }}
-        path: src-tauri/target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+        path: upload/${{ matrix.asset_name }}
 
   collect:
     needs: build
@@ -90,10 +109,45 @@ jobs:
         pattern: machine-code-tool-*
         merge-multiple: true
       
-    - name: 整理文件
+    - name: 整理文件并添加正确扩展名
       run: |
         mkdir -p release
-        find . -name "machine-code-tool*" -type f -exec cp {} release/ \;
+        
+        echo "当前目录文件:"
+        ls -la
+        
+        # 处理所有下载的文件
+        for file in machine-code-tool-*; do
+          if [ -f "$file" ]; then
+            echo "处理文件: $file"
+            cp "$file" "release/$file"
+            chmod +x "release/$file"
+          fi
+        done
+        
+        # 创建使用说明
+        cat > release/README.txt << 'EOF'
+        🚀 机器码获取工具 - 使用说明
+        ================================
+        
+        📦 文件说明:
+        - machine-code-tool-windows.exe  → Windows系统 (双击运行)
+        - machine-code-tool-macos-intel  → Intel Mac (终端: ./machine-code-tool-macos-intel)  
+        - machine-code-tool-macos-arm    → Apple Silicon Mac (终端: ./machine-code-tool-macos-arm)
+        - machine-code-tool-kylin        → 银河麒麟系统 (终端: ./machine-code-tool-kylin)
+        
+        🌐 访问界面:
+        程序启动后，打开浏览器访问: http://localhost:3030
+        
+        📋 API接口:
+        - GET  /api/machine-code  → 获取机器码
+        - GET  /api/auth-status   → 检查授权状态
+        - POST /api/set-auth      → 设置授权状态
+        
+        ⚠️  macOS安全提示:
+        如果提示"无法验证开发者"，请到 系统偏好设置 → 安全性与隐私 → 点击"仍要打开"
+        EOF
+        
         ls -la release/
         
     - name: 上传最终产物
