@@ -19,8 +19,8 @@
 - 支持 32位 和 64位 系统
 
 ### macOS
-- macOS 10.12 及以上版本
-- 支持 Intel 和 Apple Silicon
+- macOS 10.13 及以上版本
+- 支持所有Mac设备 (Intel Mac通过Rosetta 2运行)
 
 ### 银河麒麟
 - 银河麒麟 V10 及以上版本

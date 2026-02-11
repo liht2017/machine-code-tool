@@ -24,13 +24,9 @@ jobs:
             artifact_name: machine-code-tool.exe
             asset_name: machine-code-tool-windows.exe
           - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact_name: machine-code-tool
-            asset_name: machine-code-tool-macos-intel
-          - os: macos-latest
             target: aarch64-apple-darwin
             artifact_name: machine-code-tool
-            asset_name: machine-code-tool-macos-arm
+            asset_name: machine-code-tool-macos
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact_name: machine-code-tool
@@ -87,6 +83,7 @@ jobs:
           echo "Tauri CLI already installed"
           cargo tauri --version
         fi
+      shell: bash
 
     - name: 构建
       run: |
@@ -110,6 +107,7 @@ jobs:
         # 检查构建结果
         echo "构建完成，检查输出文件..."
         find target -name "machine-code-tool*" -type f || echo "未找到构建产物"
+      shell: bash
 
     - name: 构建失败时的调试信息
       if: failure()
@@ -125,6 +123,7 @@ jobs:
         if [ -f "src-tauri/target/${{ matrix.target }}/release/build/*/out/build.log" ]; then
           cat src-tauri/target/${{ matrix.target }}/release/build/*/out/build.log
         fi
+      shell: bash
 
     - name: 查找构建文件
       run: |
@@ -245,6 +244,7 @@ jobs:
         EOF
         
         ls -la release/
+      shell: bash
         
     - name: 上传最终产物
       uses: actions/upload-artifact@v4
