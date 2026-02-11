@@ -176,6 +176,15 @@ jobs:
             echo '    <true/>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '    <key>LSUIElement</key>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '    <false/>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <key>NSAppTransportSecurity</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <dict>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '        <key>NSAllowsArbitraryLoads</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '        <true/>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    </dict>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <key>NSSupportsAutomaticTermination</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <true/>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <key>NSSupportsSuddenTermination</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <true/>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '</dict>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '</plist>' >> "upload/$APP_NAME/Contents/Info.plist"
             
@@ -183,7 +192,19 @@ jobs:
             chmod -R 755 "upload/$APP_NAME"
             chmod +x "upload/$APP_NAME/Contents/MacOS/machine-code-tool"
             
+            # 移除可能的隔离属性（防止"应用已损坏"错误）
+            xattr -cr "upload/$APP_NAME" 2>/dev/null || true
+            
+            # 确保可执行文件有正确的权限
+            chmod 755 "upload/$APP_NAME/Contents/MacOS/machine-code-tool"
+            
             echo "✅ 已创建macOS应用包: $APP_NAME"
+            ls -la "upload/$APP_NAME/Contents/MacOS/"
+            
+            # 验证权限设置
+            echo "📋 权限检查:"
+            ls -la "upload/$APP_NAME"
+            ls -la "upload/$APP_NAME/Contents/"
             ls -la "upload/$APP_NAME/Contents/MacOS/"
           fi
         fi
