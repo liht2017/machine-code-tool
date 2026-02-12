@@ -200,25 +200,24 @@ async fn start_http_server(state: Arc<Mutex<AppState>>) {
     let index = warp::path::end()
         .and(warp::get())
         .map(|| {
-            warp::reply::html(r#"
-<!DOCTYPE html>
+            let html_content = format!(r#"<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>机器码获取工具</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #333; text-align: center; }
-        .status { padding: 15px; margin: 20px 0; border-radius: 5px; }
-        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
-        .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
-        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
-        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
-        button:hover { background: #0056b3; }
-        button:disabled { background: #6c757d; cursor: not-allowed; }
-        .info { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
-        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        body {{ font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        h1 {{ color: #333; text-align: center; }}
+        .status {{ padding: 15px; margin: 20px 0; border-radius: 5px; }}
+        .success {{ background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }}
+        .warning {{ background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }}
+        .error {{ background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }}
+        button {{ background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }}
+        button:hover {{ background: #0056b3; }}
+        button:disabled {{ background: #6c757d; cursor: not-allowed; }}
+        .info {{ background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+        pre {{ background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }}
     </style>
 </head>
 <body>
@@ -256,8 +255,8 @@ async fn start_http_server(state: Arc<Mutex<AppState>>) {
     <script>
         let isAuthorized = false;
         
-        async function checkStatus() {
-            try {
+        async function checkStatus() {{
+            try {{
                 const response = await fetch('/api/auth-status');
                 const data = await response.json();
                 isAuthorized = data.authorized;
@@ -266,63 +265,63 @@ async fn start_http_server(state: Arc<Mutex<AppState>>) {
                 const toggleBtn = document.getElementById('toggleAuth');
                 const getMachineBtn = document.getElementById('getMachineCode');
                 
-                if (isAuthorized) {
+                if (isAuthorized) {{
                     statusDiv.className = 'status success';
                     statusDiv.innerHTML = '✅ 授权已开启，可以获取机器码';
                     toggleBtn.textContent = '关闭授权';
                     getMachineBtn.disabled = false;
-                } else {
+                }} else {{
                     statusDiv.className = 'status warning';
                     statusDiv.innerHTML = '⚠️ 授权未开启，请先开启授权';
                     toggleBtn.textContent = '开启授权';
                     getMachineBtn.disabled = true;
-                }
-            } catch (error) {
+                }}
+            }} catch (error) {{
                 document.getElementById('status').innerHTML = '❌ 连接失败: ' + error.message;
                 document.getElementById('status').className = 'status error';
-            }
-        }
+            }}
+        }}
         
-        async function toggleAuth() {
-            try {
-                const response = await fetch('/api/set-auth', {
+        async function toggleAuth() {{
+            try {{
+                const response = await fetch('/api/set-auth', {{
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ authorized: !isAuthorized })
-                });
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ authorized: !isAuthorized }})
+                }});
                 
-                if (response.ok) {
+                if (response.ok) {{
                     await checkStatus();
-                } else {
+                }} else {{
                     throw new Error('设置授权失败');
-                }
-            } catch (error) {
+                }}
+            }} catch (error) {{
                 alert('操作失败: ' + error.message);
-            }
-        }
+            }}
+        }}
         
-        async function getMachineCode() {
-            try {
+        async function getMachineCode() {{
+            try {{
                 const response = await fetch('/api/machine-code');
                 const data = await response.json();
                 
                 const resultDiv = document.getElementById('result');
-                if (data.error) {
+                if (data.error) {{
                     resultDiv.innerHTML = '<div class="status error">❌ ' + data.message + '</div>';
-                } else {
+                }} else {{
                     resultDiv.innerHTML = '<h3>🔑 机器信息</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
-                }
-            } catch (error) {
+                }}
+            }} catch (error) {{
                 document.getElementById('result').innerHTML = '<div class="status error">❌ 获取失败: ' + error.message + '</div>';
-            }
-        }
+            }}
+        }}
         
         // 页面加载时检查状态
         checkStatus();
     </script>
 </body>
-</html>
-            "#)
+</html>"#);
+            warp::reply::html(html_content)
         });
 
     // 添加UTF-8编码头
