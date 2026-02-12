@@ -125,13 +125,11 @@ jobs:
             fi
           done
           
-          # 创建启动脚本
-          cat > portable-app/machine-code-tool-launcher << 'EOF'
-#!/bin/bash
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"
-exec "$DIR/machine-code-tool" "$@"
-EOF
+          # 创建启动脚本 (使用echo避免YAML heredoc问题)
+          echo '#!/bin/bash' > portable-app/machine-code-tool-launcher
+          echo 'DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' >> portable-app/machine-code-tool-launcher
+          echo 'export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"' >> portable-app/machine-code-tool-launcher
+          echo 'exec "$DIR/machine-code-tool" "$@"' >> portable-app/machine-code-tool-launcher
           chmod +x portable-app/machine-code-tool-launcher
           
           # 打包为tar.gz
