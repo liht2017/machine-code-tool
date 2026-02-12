@@ -138,55 +138,22 @@ jobs:
           cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool upload/${{ matrix.asset_name }}
           chmod +x upload/${{ matrix.asset_name }}
           
-          # 为macOS创建.app应用包，可直接双击运行
+          # 为macOS处理文件
           if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            APP_NAME="${{ matrix.asset_name }}.app"
-            mkdir -p "upload/$APP_NAME/Contents/MacOS"
-            mkdir -p "upload/$APP_NAME/Contents/Resources"
+            # 保持原始可执行文件（这个能正常工作）
+            # 不创建有问题的.app包了
             
-            # 复制可执行文件到app包内
-            cp "upload/${{ matrix.asset_name }}" "upload/$APP_NAME/Contents/MacOS/machine-code-tool"
-            chmod +x "upload/$APP_NAME/Contents/MacOS/machine-code-tool"
+            # 创建启动脚本让用户更容易使用
+            echo '#!/bin/bash' > "upload/启动工具.command"
+            echo 'cd "$(dirname "$0")"' >> "upload/启动工具.command"
+            echo './machine-code-tool-macos' >> "upload/启动工具.command"
+            chmod +x "upload/启动工具.command"
             
-            # 重命名原始可执行文件为备用版本（保持兼容性）
-            mv "upload/${{ matrix.asset_name }}" "upload/${{ matrix.asset_name }}-terminal"
+            # 重命名原始文件，去掉混淆的名称
+            # mv "upload/${{ matrix.asset_name }}" "upload/machine-code-tool-macos"
             
-            # 创建Info.plist (使用echo避免heredoc语法问题)
-            echo '<?xml version="1.0" encoding="UTF-8"?>' > "upload/$APP_NAME/Contents/Info.plist"
-            echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '<plist version="1.0">' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '<dict>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <key>CFBundleExecutable</key>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <string>machine-code-tool</string>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <key>CFBundleIdentifier</key>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <string>com.xinyu.machine-code-tool</string>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <key>CFBundleName</key>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <string>机器码获取工具</string>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <key>CFBundleDisplayName</key>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <string>机器码获取工具</string>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <key>CFBundleVersion</key>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <string>1.1.0</string>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <key>CFBundleShortVersionString</key>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <string>1.1.0</string>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <key>CFBundlePackageType</key>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <string>APPL</string>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <key>LSMinimumSystemVersion</key>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <string>10.13</string>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <key>NSHighResolutionCapable</key>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <true/>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <key>LSUIElement</key>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <false/>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <key>LSBackgroundOnly</key>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <false/>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '</dict>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '</plist>' >> "upload/$APP_NAME/Contents/Info.plist"
-            
-            # 设置正确的权限（恢复之前工作的简单配置）
-            chmod -R 755 "upload/$APP_NAME"
-            chmod +x "upload/$APP_NAME/Contents/MacOS/machine-code-tool"
-            
-            echo "✅ 已创建macOS应用包: $APP_NAME"
-            ls -la "upload/$APP_NAME/Contents/MacOS/"
+            echo "✅ 已创建macOS启动脚本"
+            ls -la upload/
           fi
         fi
         ls -la upload/
@@ -215,26 +182,23 @@ jobs:
           echo "========================" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "📦 文件说明:" >> upload/使用说明.txt
-          echo "- machine-code-tool-macos.app     → 推荐：双击运行" >> upload/使用说明.txt
-          echo "- machine-code-tool-macos-terminal → 备用：终端运行" >> upload/使用说明.txt
+          echo "- 启动工具.command         → 推荐：双击运行" >> upload/使用说明.txt
+          echo "- machine-code-tool-macos  → 终端运行" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "✅ 使用方法:" >> upload/使用说明.txt
-          echo "1. 双击 machine-code-tool-macos.app 运行" >> upload/使用说明.txt
+          echo "✅ 使用方法（推荐）:" >> upload/使用说明.txt
+          echo "1. 双击 '启动工具.command' 文件" >> upload/使用说明.txt
           echo "2. 首次运行可能提示安全警告，请点击'打开'" >> upload/使用说明.txt
           echo "3. 程序启动后，浏览器自动打开" >> upload/使用说明.txt
           echo "4. 如未自动打开，请访问: http://localhost:18888" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "🔧 备用方法（如果.app无法运行）:" >> upload/使用说明.txt
+          echo "🔧 备用方法（终端运行）:" >> upload/使用说明.txt
           echo "1. 打开终端，进入文件所在目录" >> upload/使用说明.txt
-          echo "2. 运行: ./machine-code-tool-macos-terminal" >> upload/使用说明.txt
+          echo "2. 运行: ./machine-code-tool-macos" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "🔒 安全提示:" >> upload/使用说明.txt
           echo "如提示'无法验证开发者':" >> upload/使用说明.txt
-          echo "- 右键点击应用 → 选择'打开'" >> upload/使用说明.txt
+          echo "- 右键点击文件 → 选择'打开'" >> upload/使用说明.txt
           echo "- 或到 系统偏好设置 → 安全性与隐私 → 点击'仍要打开'" >> upload/使用说明.txt
-          echo "" >> upload/使用说明.txt
-          echo "如提示'应用已损坏'，请在终端运行:" >> upload/使用说明.txt
-          echo "sudo xattr -rd com.apple.quarantine machine-code-tool-macos.app" >> upload/使用说明.txt
         else
           echo "🐧 机器码获取工具 - Linux版" > upload/使用说明.txt
           echo "========================" >> upload/使用说明.txt
@@ -284,13 +248,7 @@ jobs:
           fi
         done
         
-        # 处理macOS .app目录
-        for app_dir in machine-code-tool-*.app; do
-          if [ -d "$app_dir" ]; then
-            echo "处理macOS应用包: $app_dir"
-            cp -r "$app_dir" "release/$app_dir"
-          fi
-        done
+        # macOS文件已经在上面的循环中处理了
         
         
         ls -la release/
