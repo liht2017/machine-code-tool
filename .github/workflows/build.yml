@@ -99,9 +99,9 @@ jobs:
         echo "使用Rust原生TLS，无需OpenSSL依赖"
         
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          echo "Linux构建：使用较新的Ubuntu环境，提供更好的库兼容性"
-          # 使用标准构建，依赖系统库但提供更好兼容性
-          cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose
+          echo "Linux构建：生成AppImage格式，真正的开箱即用"
+          # 生成AppImage，包含所有依赖库
+          cargo tauri build --target ${{ matrix.target }} --bundles appimage --verbose
         else
           cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose
         fi
@@ -140,16 +140,26 @@ jobs:
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
           # Windows: 复制exe文件，保持.exe后缀
           cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool.exe upload/${{ matrix.asset_name }}.exe
+        elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          # Linux: 查找并复制AppImage文件
+          echo "查找AppImage文件..."
+          find src-tauri/target -name "*.AppImage" -type f
+          APPIMAGE_FILE=$(find src-tauri/target -name "*.AppImage" -type f | head -1)
+          if [ -n "$APPIMAGE_FILE" ]; then
+            echo "找到AppImage: $APPIMAGE_FILE"
+            cp "$APPIMAGE_FILE" upload/${{ matrix.asset_name }}.AppImage
+            chmod +x upload/${{ matrix.asset_name }}.AppImage
+            echo "✅ Linux AppImage文件已准备完成"
+          else
+            echo "❌ 未找到AppImage文件，尝试复制普通可执行文件"
+            cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool upload/${{ matrix.asset_name }}
+            chmod +x upload/${{ matrix.asset_name }}
+          fi
         else
-          # macOS/Linux: 复制文件并添加执行权限
+          # macOS: 复制文件并添加执行权限
           cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool upload/${{ matrix.asset_name }}
           chmod +x upload/${{ matrix.asset_name }}
-          
-          # 为macOS处理文件 - 只保留原始可执行文件
-          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            echo "✅ macOS文件已准备完成"
-            ls -la upload/
-          fi
+          echo "✅ macOS文件已准备完成"
         fi
         ls -la upload/
       shell: bash
@@ -190,15 +200,15 @@ jobs:
           echo "============================" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "✅ 使用方法:" >> upload/使用说明.txt
-          echo "方法一（推荐）：双击运行" >> upload/使用说明.txt
-          echo "1. 右键点击 machine-code-tool-kylin 文件" >> upload/使用说明.txt
+          echo "方法一（推荐）：双击运行AppImage" >> upload/使用说明.txt
+          echo "1. 右键点击 machine-code-tool-kylin.AppImage 文件" >> upload/使用说明.txt
           echo "2. 选择"属性" → "权限" → 勾选"允许作为程序执行文件"" >> upload/使用说明.txt
           echo "3. 双击文件即可运行" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "方法二：终端运行（适合技术人员）" >> upload/使用说明.txt
           echo "1. 打开终端，进入文件所在目录" >> upload/使用说明.txt
-          echo "2. 输入命令: chmod +x machine-code-tool-kylin" >> upload/使用说明.txt
-          echo "3. 输入命令: ./machine-code-tool-kylin" >> upload/使用说明.txt
+          echo "2. 输入命令: chmod +x machine-code-tool-kylin.AppImage" >> upload/使用说明.txt
+          echo "3. 输入命令: ./machine-code-tool-kylin.AppImage" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "📋 功能说明:" >> upload/使用说明.txt
           echo "- 获取本机硬件信息（MAC地址、主板序列号等）" >> upload/使用说明.txt
@@ -206,12 +216,13 @@ jobs:
           echo "" >> upload/使用说明.txt
           echo "💡 提示:" >> upload/使用说明.txt
           echo "- 适用于银河麒麟桌面操作系统" >> upload/使用说明.txt
+          echo "- AppImage格式包含所有依赖，无需安装任何库" >> upload/使用说明.txt
           echo "- 程序启动后会显示操作界面" >> upload/使用说明.txt
           echo "- 如需关闭程序，点击窗口关闭按钮即可" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "❓ 如果程序无法启动:" >> upload/使用说明.txt
-          echo "可能需要安装WebKit库（大多数系统已预装）：" >> upload/使用说明.txt
-          echo "sudo yum install -y webkit2gtk4.1 或 sudo apt install -y libwebkit2gtk-4.1-0" >> upload/使用说明.txt
+          echo "🔍 什么是AppImage？" >> upload/使用说明.txt
+          echo "AppImage是Linux下的便携应用格式，类似Windows的绿色软件" >> upload/使用说明.txt
+          echo "包含程序运行所需的全部文件，无需安装，双击即可运行" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
         fi
       shell: bash
