@@ -22,7 +22,7 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: machine-code-tool.exe
-            asset_name: machine-code-tool-windows.exe
+            asset_name: machine-code-tool-windows
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact_name: machine-code-tool
@@ -131,8 +131,8 @@ jobs:
       run: |
         mkdir -p upload
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          # Windows: 直接复制exe文件
-          cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool.exe upload/${{ matrix.asset_name }}
+          # Windows: 复制exe文件，保持.exe后缀
+          cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool.exe upload/${{ matrix.asset_name }}.exe
         else
           # macOS/Linux: 复制文件并添加执行权限
           cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool upload/${{ matrix.asset_name }}
@@ -148,8 +148,8 @@ jobs:
             cp "upload/${{ matrix.asset_name }}" "upload/$APP_NAME/Contents/MacOS/machine-code-tool"
             chmod +x "upload/$APP_NAME/Contents/MacOS/machine-code-tool"
             
-            # 保留原始可执行文件（之前能运行的版本有两个文件）
-            # rm "upload/${{ matrix.asset_name }}"  # 注释掉删除操作
+            # 删除原始可执行文件，只保留.app包（解决重复文件问题）
+            rm "upload/${{ matrix.asset_name }}"
             
             # 创建Info.plist (使用echo避免heredoc语法问题)
             echo '<?xml version="1.0" encoding="UTF-8"?>' > "upload/$APP_NAME/Contents/Info.plist"
@@ -175,6 +175,8 @@ jobs:
             echo '    <key>NSHighResolutionCapable</key>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '    <true/>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '    <key>LSUIElement</key>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <false/>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <key>LSBackgroundOnly</key>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '    <false/>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '</dict>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '</plist>' >> "upload/$APP_NAME/Contents/Info.plist"
@@ -229,6 +231,54 @@ jobs:
             cp -r "$app_dir" "release/$app_dir"
           fi
         done
+        
+        # 生成各平台用户说明
+        echo "🚀 机器码获取工具" > release/Windows使用说明.txt
+        echo "===============" >> release/Windows使用说明.txt
+        echo "" >> release/Windows使用说明.txt
+        echo "✅ 使用方法:" >> release/Windows使用说明.txt
+        echo "1. 双击 machine-code-tool-windows.exe 运行" >> release/Windows使用说明.txt
+        echo "2. 程序启动后，浏览器自动打开" >> release/Windows使用说明.txt
+        echo "3. 如未自动打开，请访问: http://localhost:18888" >> release/Windows使用说明.txt
+        echo "" >> release/Windows使用说明.txt
+        echo "📋 功能说明:" >> release/Windows使用说明.txt
+        echo "- 获取本机硬件信息（MAC地址、主板序列号等）" >> release/Windows使用说明.txt
+        echo "- 生成唯一机器码用于软件授权" >> release/Windows使用说明.txt
+        echo "" >> release/Windows使用说明.txt
+        echo "❓ 常见问题:" >> release/Windows使用说明.txt
+        echo "- 如果杀毒软件拦截，请添加信任" >> release/Windows使用说明.txt
+        echo "- 程序运行时请勿关闭黑色窗口" >> release/Windows使用说明.txt
+        
+        echo "🍎 机器码获取工具 - macOS版" > release/macOS使用说明.txt
+        echo "========================" >> release/macOS使用说明.txt
+        echo "" >> release/macOS使用说明.txt
+        echo "✅ 使用方法:" >> release/macOS使用说明.txt
+        echo "1. 双击 machine-code-tool-macos.app 运行" >> release/macOS使用说明.txt
+        echo "2. 首次运行可能提示安全警告，请点击'打开'" >> release/macOS使用说明.txt
+        echo "3. 程序启动后，浏览器自动打开" >> release/macOS使用说明.txt
+        echo "4. 如未自动打开，请访问: http://localhost:18888" >> release/macOS使用说明.txt
+        echo "" >> release/macOS使用说明.txt
+        echo "🔒 安全提示:" >> release/macOS使用说明.txt
+        echo "如提示'无法验证开发者':" >> release/macOS使用说明.txt
+        echo "- 右键点击应用 → 选择'打开'" >> release/macOS使用说明.txt
+        echo "- 或到 系统偏好设置 → 安全性与隐私 → 点击'仍要打开'" >> release/macOS使用说明.txt
+        echo "" >> release/macOS使用说明.txt
+        echo "如提示'应用已损坏'，请在终端运行:" >> release/macOS使用说明.txt
+        echo "sudo xattr -rd com.apple.quarantine machine-code-tool-macos.app" >> release/macOS使用说明.txt
+        
+        echo "🐧 机器码获取工具 - Linux版" > release/Linux使用说明.txt
+        echo "========================" >> release/Linux使用说明.txt
+        echo "" >> release/Linux使用说明.txt
+        echo "✅ 使用方法:" >> release/Linux使用说明.txt
+        echo "1. 打开终端，进入文件所在目录" >> release/Linux使用说明.txt
+        echo "2. 添加执行权限: chmod +x machine-code-tool-kylin" >> release/Linux使用说明.txt
+        echo "3. 运行程序: ./machine-code-tool-kylin" >> release/Linux使用说明.txt
+        echo "4. 打开浏览器访问: http://localhost:18888" >> release/Linux使用说明.txt
+        echo "" >> release/Linux使用说明.txt
+        echo "💡 提示:" >> release/Linux使用说明.txt
+        echo "- 适用于银河麒麟、Ubuntu、CentOS等Linux系统" >> release/Linux使用说明.txt
+        echo "- 程序运行期间请保持终端窗口打开" >> release/Linux使用说明.txt
+        echo "- 按 Ctrl+C 可停止程序" >> release/Linux使用说明.txt
         
         ls -la release/
       shell: bash
