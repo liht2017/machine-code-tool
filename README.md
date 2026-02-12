@@ -32,9 +32,9 @@
 ### 使用方法
 1. 下载对应平台的可执行文件
 2. Windows: 双击 `.exe` 文件运行
-3. macOS: 双击 `.app` 文件运行
-4. Linux: `chmod +x` 后运行
-5. 浏览器访问 `http://localhost:18888`
+3. macOS: 终端运行 `./machine-code-tool-macos`
+4. Linux: `chmod +x` 后运行 `./machine-code-tool-kylin`
+5. 程序启动后使用Tauri界面或调用API接口
 
 ## API接口
 

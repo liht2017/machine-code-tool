@@ -138,21 +138,9 @@ jobs:
           cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool upload/${{ matrix.asset_name }}
           chmod +x upload/${{ matrix.asset_name }}
           
-          # 为macOS处理文件
+          # 为macOS处理文件 - 只保留原始可执行文件
           if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            # 保持原始可执行文件（这个能正常工作）
-            # 不创建有问题的.app包了
-            
-            # 创建启动脚本让用户更容易使用
-            echo '#!/bin/bash' > "upload/启动工具.command"
-            echo 'cd "$(dirname "$0")"' >> "upload/启动工具.command"
-            echo './machine-code-tool-macos' >> "upload/启动工具.command"
-            chmod +x "upload/启动工具.command"
-            
-            # 重命名原始文件，去掉混淆的名称
-            # mv "upload/${{ matrix.asset_name }}" "upload/machine-code-tool-macos"
-            
-            echo "✅ 已创建macOS启动脚本"
+            echo "✅ macOS文件已准备完成"
             ls -la upload/
           fi
         fi
@@ -167,12 +155,18 @@ jobs:
           echo "" >> upload/使用说明.txt
           echo "✅ 使用方法:" >> upload/使用说明.txt
           echo "1. 双击 machine-code-tool-windows.exe 运行" >> upload/使用说明.txt
-          echo "2. 程序启动后，浏览器自动打开" >> upload/使用说明.txt
-          echo "3. 如未自动打开，请访问: http://localhost:18888" >> upload/使用说明.txt
+          echo "2. 程序启动后，使用Tauri界面或API接口" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "📋 功能说明:" >> upload/使用说明.txt
           echo "- 获取本机硬件信息（MAC地址、主板序列号等）" >> upload/使用说明.txt
           echo "- 生成唯一机器码用于软件授权" >> upload/使用说明.txt
+          echo "- 提供HTTP API服务（端口18888）" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "🔗 API接口:" >> upload/使用说明.txt
+          echo "- GET  /api/machine-code  → 获取机器码" >> upload/使用说明.txt
+          echo "- GET  /api/auth-status   → 检查授权状态" >> upload/使用说明.txt
+          echo "- POST /api/set-auth      → 设置授权状态" >> upload/使用说明.txt
+          echo "- GET  /health            → 健康检查" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "❓ 常见问题:" >> upload/使用说明.txt
           echo "- 如果杀毒软件拦截，请添加信任" >> upload/使用说明.txt
@@ -181,19 +175,21 @@ jobs:
           echo "🍎 机器码获取工具 - macOS版" > upload/使用说明.txt
           echo "========================" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "📦 文件说明:" >> upload/使用说明.txt
-          echo "- 启动工具.command         → 推荐：双击运行" >> upload/使用说明.txt
-          echo "- machine-code-tool-macos  → 终端运行" >> upload/使用说明.txt
-          echo "" >> upload/使用说明.txt
-          echo "✅ 使用方法（推荐）:" >> upload/使用说明.txt
-          echo "1. 双击 '启动工具.command' 文件" >> upload/使用说明.txt
-          echo "2. 首次运行可能提示安全警告，请点击'打开'" >> upload/使用说明.txt
-          echo "3. 程序启动后，浏览器自动打开" >> upload/使用说明.txt
-          echo "4. 如未自动打开，请访问: http://localhost:18888" >> upload/使用说明.txt
-          echo "" >> upload/使用说明.txt
-          echo "🔧 备用方法（终端运行）:" >> upload/使用说明.txt
+          echo "✅ 使用方法:" >> upload/使用说明.txt
           echo "1. 打开终端，进入文件所在目录" >> upload/使用说明.txt
-          echo "2. 运行: ./machine-code-tool-macos" >> upload/使用说明.txt
+          echo "2. 运行命令: ./machine-code-tool-macos" >> upload/使用说明.txt
+          echo "3. 程序启动后，使用Tauri界面或API接口" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "📋 功能说明:" >> upload/使用说明.txt
+          echo "- 获取本机硬件信息（MAC地址、主板序列号等）" >> upload/使用说明.txt
+          echo "- 生成唯一机器码用于软件授权" >> upload/使用说明.txt
+          echo "- 提供HTTP API服务（端口18888）" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "🔗 API接口:" >> upload/使用说明.txt
+          echo "- GET  /api/machine-code  → 获取机器码" >> upload/使用说明.txt
+          echo "- GET  /api/auth-status   → 检查授权状态" >> upload/使用说明.txt
+          echo "- POST /api/set-auth      → 设置授权状态" >> upload/使用说明.txt
+          echo "- GET  /health            → 健康检查" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "🔒 安全提示:" >> upload/使用说明.txt
           echo "如提示'无法验证开发者':" >> upload/使用说明.txt
@@ -207,7 +203,18 @@ jobs:
           echo "1. 打开终端，进入文件所在目录" >> upload/使用说明.txt
           echo "2. 添加执行权限: chmod +x machine-code-tool-kylin" >> upload/使用说明.txt
           echo "3. 运行程序: ./machine-code-tool-kylin" >> upload/使用说明.txt
-          echo "4. 打开浏览器访问: http://localhost:18888" >> upload/使用说明.txt
+          echo "4. 程序启动后，使用Tauri界面或API接口" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "📋 功能说明:" >> upload/使用说明.txt
+          echo "- 获取本机硬件信息（MAC地址、主板序列号等）" >> upload/使用说明.txt
+          echo "- 生成唯一机器码用于软件授权" >> upload/使用说明.txt
+          echo "- 提供HTTP API服务（端口18888）" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "🔗 API接口:" >> upload/使用说明.txt
+          echo "- GET  /api/machine-code  → 获取机器码" >> upload/使用说明.txt
+          echo "- GET  /api/auth-status   → 检查授权状态" >> upload/使用说明.txt
+          echo "- POST /api/set-auth      → 设置授权状态" >> upload/使用说明.txt
+          echo "- GET  /health            → 健康检查" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "💡 提示:" >> upload/使用说明.txt
           echo "- 适用于银河麒麟、Ubuntu、CentOS等Linux系统" >> upload/使用说明.txt
