@@ -148,8 +148,8 @@ jobs:
             cp "upload/${{ matrix.asset_name }}" "upload/$APP_NAME/Contents/MacOS/machine-code-tool"
             chmod +x "upload/$APP_NAME/Contents/MacOS/machine-code-tool"
             
-            # 删除原始可执行文件，只保留.app包（解决重复文件问题）
-            rm "upload/${{ matrix.asset_name }}"
+            # 重命名原始可执行文件为备用版本（保持兼容性）
+            mv "upload/${{ matrix.asset_name }}" "upload/${{ matrix.asset_name }}-terminal"
             
             # 创建Info.plist (使用echo避免heredoc语法问题)
             echo '<?xml version="1.0" encoding="UTF-8"?>' > "upload/$APP_NAME/Contents/Info.plist"
@@ -165,9 +165,9 @@ jobs:
             echo '    <key>CFBundleDisplayName</key>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '    <string>机器码获取工具</string>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '    <key>CFBundleVersion</key>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <string>2.1.0</string>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <string>1.1.0</string>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '    <key>CFBundleShortVersionString</key>' >> "upload/$APP_NAME/Contents/Info.plist"
-            echo '    <string>2.1.0</string>' >> "upload/$APP_NAME/Contents/Info.plist"
+            echo '    <string>1.1.0</string>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '    <key>CFBundlePackageType</key>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '    <string>APPL</string>' >> "upload/$APP_NAME/Contents/Info.plist"
             echo '    <key>LSMinimumSystemVersion</key>' >> "upload/$APP_NAME/Contents/Info.plist"
@@ -190,6 +190,66 @@ jobs:
           fi
         fi
         ls -la upload/
+      shell: bash
+
+    - name: 生成平台说明文件
+      run: |
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          echo "🚀 机器码获取工具 - Windows版" > upload/使用说明.txt
+          echo "=========================" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "✅ 使用方法:" >> upload/使用说明.txt
+          echo "1. 双击 machine-code-tool-windows.exe 运行" >> upload/使用说明.txt
+          echo "2. 程序启动后，浏览器自动打开" >> upload/使用说明.txt
+          echo "3. 如未自动打开，请访问: http://localhost:18888" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "📋 功能说明:" >> upload/使用说明.txt
+          echo "- 获取本机硬件信息（MAC地址、主板序列号等）" >> upload/使用说明.txt
+          echo "- 生成唯一机器码用于软件授权" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "❓ 常见问题:" >> upload/使用说明.txt
+          echo "- 如果杀毒软件拦截，请添加信任" >> upload/使用说明.txt
+          echo "- 程序运行时请勿关闭黑色窗口" >> upload/使用说明.txt
+        elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+          echo "🍎 机器码获取工具 - macOS版" > upload/使用说明.txt
+          echo "========================" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "📦 文件说明:" >> upload/使用说明.txt
+          echo "- machine-code-tool-macos.app     → 推荐：双击运行" >> upload/使用说明.txt
+          echo "- machine-code-tool-macos-terminal → 备用：终端运行" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "✅ 使用方法:" >> upload/使用说明.txt
+          echo "1. 双击 machine-code-tool-macos.app 运行" >> upload/使用说明.txt
+          echo "2. 首次运行可能提示安全警告，请点击'打开'" >> upload/使用说明.txt
+          echo "3. 程序启动后，浏览器自动打开" >> upload/使用说明.txt
+          echo "4. 如未自动打开，请访问: http://localhost:18888" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "🔧 备用方法（如果.app无法运行）:" >> upload/使用说明.txt
+          echo "1. 打开终端，进入文件所在目录" >> upload/使用说明.txt
+          echo "2. 运行: ./machine-code-tool-macos-terminal" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "🔒 安全提示:" >> upload/使用说明.txt
+          echo "如提示'无法验证开发者':" >> upload/使用说明.txt
+          echo "- 右键点击应用 → 选择'打开'" >> upload/使用说明.txt
+          echo "- 或到 系统偏好设置 → 安全性与隐私 → 点击'仍要打开'" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "如提示'应用已损坏'，请在终端运行:" >> upload/使用说明.txt
+          echo "sudo xattr -rd com.apple.quarantine machine-code-tool-macos.app" >> upload/使用说明.txt
+        else
+          echo "🐧 机器码获取工具 - Linux版" > upload/使用说明.txt
+          echo "========================" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "✅ 使用方法:" >> upload/使用说明.txt
+          echo "1. 打开终端，进入文件所在目录" >> upload/使用说明.txt
+          echo "2. 添加执行权限: chmod +x machine-code-tool-kylin" >> upload/使用说明.txt
+          echo "3. 运行程序: ./machine-code-tool-kylin" >> upload/使用说明.txt
+          echo "4. 打开浏览器访问: http://localhost:18888" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "💡 提示:" >> upload/使用说明.txt
+          echo "- 适用于银河麒麟、Ubuntu、CentOS等Linux系统" >> upload/使用说明.txt
+          echo "- 程序运行期间请保持终端窗口打开" >> upload/使用说明.txt
+          echo "- 按 Ctrl+C 可停止程序" >> upload/使用说明.txt
+        fi
       shell: bash
 
     - name: 上传构建产物
@@ -232,53 +292,6 @@ jobs:
           fi
         done
         
-        # 生成各平台用户说明
-        echo "🚀 机器码获取工具" > release/Windows使用说明.txt
-        echo "===============" >> release/Windows使用说明.txt
-        echo "" >> release/Windows使用说明.txt
-        echo "✅ 使用方法:" >> release/Windows使用说明.txt
-        echo "1. 双击 machine-code-tool-windows.exe 运行" >> release/Windows使用说明.txt
-        echo "2. 程序启动后，浏览器自动打开" >> release/Windows使用说明.txt
-        echo "3. 如未自动打开，请访问: http://localhost:18888" >> release/Windows使用说明.txt
-        echo "" >> release/Windows使用说明.txt
-        echo "📋 功能说明:" >> release/Windows使用说明.txt
-        echo "- 获取本机硬件信息（MAC地址、主板序列号等）" >> release/Windows使用说明.txt
-        echo "- 生成唯一机器码用于软件授权" >> release/Windows使用说明.txt
-        echo "" >> release/Windows使用说明.txt
-        echo "❓ 常见问题:" >> release/Windows使用说明.txt
-        echo "- 如果杀毒软件拦截，请添加信任" >> release/Windows使用说明.txt
-        echo "- 程序运行时请勿关闭黑色窗口" >> release/Windows使用说明.txt
-        
-        echo "🍎 机器码获取工具 - macOS版" > release/macOS使用说明.txt
-        echo "========================" >> release/macOS使用说明.txt
-        echo "" >> release/macOS使用说明.txt
-        echo "✅ 使用方法:" >> release/macOS使用说明.txt
-        echo "1. 双击 machine-code-tool-macos.app 运行" >> release/macOS使用说明.txt
-        echo "2. 首次运行可能提示安全警告，请点击'打开'" >> release/macOS使用说明.txt
-        echo "3. 程序启动后，浏览器自动打开" >> release/macOS使用说明.txt
-        echo "4. 如未自动打开，请访问: http://localhost:18888" >> release/macOS使用说明.txt
-        echo "" >> release/macOS使用说明.txt
-        echo "🔒 安全提示:" >> release/macOS使用说明.txt
-        echo "如提示'无法验证开发者':" >> release/macOS使用说明.txt
-        echo "- 右键点击应用 → 选择'打开'" >> release/macOS使用说明.txt
-        echo "- 或到 系统偏好设置 → 安全性与隐私 → 点击'仍要打开'" >> release/macOS使用说明.txt
-        echo "" >> release/macOS使用说明.txt
-        echo "如提示'应用已损坏'，请在终端运行:" >> release/macOS使用说明.txt
-        echo "sudo xattr -rd com.apple.quarantine machine-code-tool-macos.app" >> release/macOS使用说明.txt
-        
-        echo "🐧 机器码获取工具 - Linux版" > release/Linux使用说明.txt
-        echo "========================" >> release/Linux使用说明.txt
-        echo "" >> release/Linux使用说明.txt
-        echo "✅ 使用方法:" >> release/Linux使用说明.txt
-        echo "1. 打开终端，进入文件所在目录" >> release/Linux使用说明.txt
-        echo "2. 添加执行权限: chmod +x machine-code-tool-kylin" >> release/Linux使用说明.txt
-        echo "3. 运行程序: ./machine-code-tool-kylin" >> release/Linux使用说明.txt
-        echo "4. 打开浏览器访问: http://localhost:18888" >> release/Linux使用说明.txt
-        echo "" >> release/Linux使用说明.txt
-        echo "💡 提示:" >> release/Linux使用说明.txt
-        echo "- 适用于银河麒麟、Ubuntu、CentOS等Linux系统" >> release/Linux使用说明.txt
-        echo "- 程序运行期间请保持终端窗口打开" >> release/Linux使用说明.txt
-        echo "- 按 Ctrl+C 可停止程序" >> release/Linux使用说明.txt
         
         ls -la release/
       shell: bash
