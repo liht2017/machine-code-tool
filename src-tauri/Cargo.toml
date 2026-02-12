@@ -87,3 +87,5 @@ custom-protocol = [ "tauri/custom-protocol" ]
 # 确保使用原生TLS实现，避免OpenSSL依赖
 [profile.release]
 strip = true  # 减小二进制文件大小
+lto = true    # 链接时优化
+codegen-units = 1  # 更好的优化
