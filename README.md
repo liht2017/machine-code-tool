@@ -33,7 +33,10 @@
 1. 下载对应平台的可执行文件
 2. Windows: 双击 `.exe` 文件运行即可
 3. macOS: 双击文件运行即可
-4. Linux: `chmod +x` 后运行 `./machine-code-tool-kylin`
+4. Linux: 
+   - 安装依赖: `sudo yum install openssl-libs` 或 `sudo apt-get install libssl3`
+   - 添加权限: `chmod +x machine-code-tool-kylin`
+   - 运行程序: `./machine-code-tool-kylin`
 
 ## API接口
 

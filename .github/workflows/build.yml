@@ -97,6 +97,13 @@ jobs:
         
         # 简化构建：所有平台都只生成可执行文件，避免打包问题
         echo "构建可执行文件，跳过复杂打包"
+        
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          echo "Linux构建：尝试静态链接OpenSSL"
+          export OPENSSL_STATIC=1
+          export PKG_CONFIG_ALLOW_CROSS=1
+        fi
+        
         cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose
         
         # 检查构建结果
@@ -183,10 +190,17 @@ jobs:
           echo "========================" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "✅ 使用方法:" >> upload/使用说明.txt
-          echo "1. 打开终端，进入文件所在目录" >> upload/使用说明.txt
-          echo "2. 添加执行权限: chmod +x machine-code-tool-kylin" >> upload/使用说明.txt
-          echo "3. 运行程序: ./machine-code-tool-kylin" >> upload/使用说明.txt
-          echo "4. 程序启动后，使用Tauri界面或API接口" >> upload/使用说明.txt
+          echo "1. 安装依赖库（如果缺少）:" >> upload/使用说明.txt
+          echo "   # CentOS/RHEL/银河麒麟:" >> upload/使用说明.txt
+          echo "   sudo yum install -y openssl-libs" >> upload/使用说明.txt
+          echo "   # 或者:" >> upload/使用说明.txt
+          echo "   sudo dnf install -y openssl-libs" >> upload/使用说明.txt
+          echo "   # Ubuntu/Debian:" >> upload/使用说明.txt
+          echo "   sudo apt-get install -y libssl3" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "2. 打开终端，进入文件所在目录" >> upload/使用说明.txt
+          echo "3. 添加执行权限: chmod +x machine-code-tool-kylin" >> upload/使用说明.txt
+          echo "4. 运行程序: ./machine-code-tool-kylin" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "📋 功能说明:" >> upload/使用说明.txt
           echo "- 获取本机硬件信息（MAC地址、主板序列号等）" >> upload/使用说明.txt
@@ -196,6 +210,10 @@ jobs:
           echo "- 适用于银河麒麟、Ubuntu、CentOS等Linux系统" >> upload/使用说明.txt
           echo "- 程序运行期间请保持终端窗口打开" >> upload/使用说明.txt
           echo "- 按 Ctrl+C 可停止程序" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "❓ 常见问题:" >> upload/使用说明.txt
+          echo "如提示 'libssl.so.3: cannot open shared object file':" >> upload/使用说明.txt
+          echo "说明系统缺少OpenSSL库，请按上述方法安装依赖" >> upload/使用说明.txt
         fi
       shell: bash
 
