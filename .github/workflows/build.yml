@@ -108,7 +108,22 @@ jobs:
           cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose
           
           echo "后处理：创建便携包，包含依赖库"
-          cd src-tauri/target/${{ matrix.target }}/release/
+          echo "当前目录: $(pwd)"
+          echo "查找构建产物位置..."
+          find . -name "machine-code-tool" -type f 2>/dev/null || true
+          
+          # 确定正确的构建目录
+          if [ -f "src-tauri/target/${{ matrix.target }}/release/machine-code-tool" ]; then
+            BUILD_DIR="src-tauri/target/${{ matrix.target }}/release"
+          elif [ -f "target/${{ matrix.target }}/release/machine-code-tool" ]; then
+            BUILD_DIR="target/${{ matrix.target }}/release"
+          else
+            echo "❌ 找不到构建产物"
+            exit 1
+          fi
+          
+          echo "使用构建目录: $BUILD_DIR"
+          cd "$BUILD_DIR"
           
           # 创建便携目录结构
           mkdir -p portable-app/lib
@@ -180,14 +195,27 @@ jobs:
           # Windows: 复制exe文件，保持.exe后缀
           cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool.exe upload/${{ matrix.asset_name }}.exe
         elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          # Linux: 复制便携版本
-          if [ -f "src-tauri/target/${{ matrix.target }}/release/machine-code-tool-portable.tar.gz" ]; then
+          # Linux: 查找并复制构建产物
+          echo "查找Linux构建产物..."
+          
+          # 确定构建目录
+          if [ -f "src-tauri/target/${{ matrix.target }}/release/machine-code-tool" ]; then
+            BUILD_DIR="src-tauri/target/${{ matrix.target }}/release"
+          elif [ -f "target/${{ matrix.target }}/release/machine-code-tool" ]; then
+            BUILD_DIR="target/${{ matrix.target }}/release"
+          else
+            echo "❌ 找不到Linux构建产物"
+            exit 1
+          fi
+          
+          # 优先使用便携版本
+          if [ -f "$BUILD_DIR/machine-code-tool-portable.tar.gz" ]; then
             echo "复制便携版本..."
-            cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool-portable.tar.gz upload/${{ matrix.asset_name }}-portable.tar.gz
+            cp "$BUILD_DIR/machine-code-tool-portable.tar.gz" upload/${{ matrix.asset_name }}-portable.tar.gz
             echo "✅ Linux便携版本已准备完成"
           else
             echo "便携版本未找到，使用标准版本..."
-            cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool upload/${{ matrix.asset_name }}
+            cp "$BUILD_DIR/machine-code-tool" upload/${{ matrix.asset_name }}
             chmod +x upload/${{ matrix.asset_name }}
             echo "✅ Linux标准版本已准备完成"
           fi
@@ -236,14 +264,18 @@ jobs:
           echo "============================" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "✅ 使用方法:" >> upload/使用说明.txt
+          echo "如果下载的是 .tar.gz 文件（便携版，推荐）:" >> upload/使用说明.txt
           echo "1. 解压文件: 右键点击 machine-code-tool-kylin-portable.tar.gz → 解压" >> upload/使用说明.txt
           echo "2. 进入解压后的 portable-app 文件夹" >> upload/使用说明.txt
           echo "3. 双击 machine-code-tool-launcher 启动程序" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "💡 如果双击无效:" >> upload/使用说明.txt
-          echo "1. 右键点击 machine-code-tool-launcher" >> upload/使用说明.txt
+          echo "如果下载的是单个文件（标准版）:" >> upload/使用说明.txt
+          echo "1. 右键点击 machine-code-tool-kylin 文件" >> upload/使用说明.txt
           echo "2. 选择"属性" → "权限" → 勾选"允许作为程序执行文件"" >> upload/使用说明.txt
-          echo "3. 再次双击运行" >> upload/使用说明.txt
+          echo "3. 双击文件运行" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "💡 如果双击无效:" >> upload/使用说明.txt
+          echo "右键点击文件 → 属性 → 权限 → 勾选执行权限 → 再次双击" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "📋 功能说明:" >> upload/使用说明.txt
           echo "- 获取本机硬件信息（MAC地址、主板序列号等）" >> upload/使用说明.txt
@@ -251,13 +283,14 @@ jobs:
           echo "" >> upload/使用说明.txt
           echo "💡 提示:" >> upload/使用说明.txt
           echo "- 适用于银河麒麟桌面操作系统" >> upload/使用说明.txt
-          echo "- 便携版本包含所有必要库，无需安装任何依赖" >> upload/使用说明.txt
+          echo "- 便携版（.tar.gz）包含所有库，无需安装依赖" >> upload/使用说明.txt
+          echo "- 标准版可能需要安装WebKit库（大多数系统已预装）" >> upload/使用说明.txt
           echo "- 程序启动后会显示操作界面" >> upload/使用说明.txt
           echo "- 如需关闭程序，点击窗口关闭按钮即可" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "🔍 什么是便携版？" >> upload/使用说明.txt
-          echo "便携版包含程序运行所需的全部库文件" >> upload/使用说明.txt
-          echo "无需安装任何依赖，解压即可使用" >> upload/使用说明.txt
+          echo "❓ 如果标准版无法启动:" >> upload/使用说明.txt
+          echo "sudo yum install -y webkit2gtk4.1" >> upload/使用说明.txt
+          echo "或者: sudo apt install -y libwebkit2gtk-4.1-0" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
         fi
       shell: bash
