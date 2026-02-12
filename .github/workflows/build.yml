@@ -154,19 +154,11 @@ jobs:
           echo "=========================" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "✅ 使用方法:" >> upload/使用说明.txt
-          echo "1. 双击 machine-code-tool-windows.exe 运行" >> upload/使用说明.txt
-          echo "2. 程序启动后，使用Tauri界面或API接口" >> upload/使用说明.txt
+          echo "双击 machine-code-tool-windows.exe 运行即可" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "📋 功能说明:" >> upload/使用说明.txt
           echo "- 获取本机硬件信息（MAC地址、主板序列号等）" >> upload/使用说明.txt
           echo "- 生成唯一机器码用于软件授权" >> upload/使用说明.txt
-          echo "- 提供HTTP API服务（端口18888）" >> upload/使用说明.txt
-          echo "" >> upload/使用说明.txt
-          echo "🔗 API接口:" >> upload/使用说明.txt
-          echo "- GET  /api/machine-code  → 获取机器码" >> upload/使用说明.txt
-          echo "- GET  /api/auth-status   → 检查授权状态" >> upload/使用说明.txt
-          echo "- POST /api/set-auth      → 设置授权状态" >> upload/使用说明.txt
-          echo "- GET  /health            → 健康检查" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "❓ 常见问题:" >> upload/使用说明.txt
           echo "- 如果杀毒软件拦截，请添加信任" >> upload/使用说明.txt
@@ -176,20 +168,11 @@ jobs:
           echo "========================" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "✅ 使用方法:" >> upload/使用说明.txt
-          echo "1. 打开终端，进入文件所在目录" >> upload/使用说明.txt
-          echo "2. 运行命令: ./machine-code-tool-macos" >> upload/使用说明.txt
-          echo "3. 程序启动后，使用Tauri界面或API接口" >> upload/使用说明.txt
+          echo "双击 machine-code-tool-macos 文件运行即可" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "📋 功能说明:" >> upload/使用说明.txt
           echo "- 获取本机硬件信息（MAC地址、主板序列号等）" >> upload/使用说明.txt
           echo "- 生成唯一机器码用于软件授权" >> upload/使用说明.txt
-          echo "- 提供HTTP API服务（端口18888）" >> upload/使用说明.txt
-          echo "" >> upload/使用说明.txt
-          echo "🔗 API接口:" >> upload/使用说明.txt
-          echo "- GET  /api/machine-code  → 获取机器码" >> upload/使用说明.txt
-          echo "- GET  /api/auth-status   → 检查授权状态" >> upload/使用说明.txt
-          echo "- POST /api/set-auth      → 设置授权状态" >> upload/使用说明.txt
-          echo "- GET  /health            → 健康检查" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "🔒 安全提示:" >> upload/使用说明.txt
           echo "如提示'无法验证开发者':" >> upload/使用说明.txt
@@ -208,13 +191,6 @@ jobs:
           echo "📋 功能说明:" >> upload/使用说明.txt
           echo "- 获取本机硬件信息（MAC地址、主板序列号等）" >> upload/使用说明.txt
           echo "- 生成唯一机器码用于软件授权" >> upload/使用说明.txt
-          echo "- 提供HTTP API服务（端口18888）" >> upload/使用说明.txt
-          echo "" >> upload/使用说明.txt
-          echo "🔗 API接口:" >> upload/使用说明.txt
-          echo "- GET  /api/machine-code  → 获取机器码" >> upload/使用说明.txt
-          echo "- GET  /api/auth-status   → 检查授权状态" >> upload/使用说明.txt
-          echo "- POST /api/set-auth      → 设置授权状态" >> upload/使用说明.txt
-          echo "- GET  /health            → 健康检查" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "💡 提示:" >> upload/使用说明.txt
           echo "- 适用于银河麒麟、Ubuntu、CentOS等Linux系统" >> upload/使用说明.txt

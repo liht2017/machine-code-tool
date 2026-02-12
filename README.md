@@ -31,10 +31,9 @@
 
 ### 使用方法
 1. 下载对应平台的可执行文件
-2. Windows: 双击 `.exe` 文件运行
-3. macOS: 终端运行 `./machine-code-tool-macos`
+2. Windows: 双击 `.exe` 文件运行即可
+3. macOS: 双击文件运行即可
 4. Linux: `chmod +x` 后运行 `./machine-code-tool-kylin`
-5. 程序启动后使用Tauri界面或调用API接口
 
 ## API接口
 

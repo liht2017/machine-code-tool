@@ -294,7 +294,7 @@
                 <h3 class="software-title">软件信息</h3>
                 <div class="software-item">
                     <span class="software-label">版本:</span>
-                    <span id="softwareVersion" class="software-value">1.1.0</span>
+                    <span id="softwareVersion" class="software-value">2.1.0</span>
                     <a href="#" class="update-link" onclick="checkUpdate()">检查更新</a>
                 </div>
             </div>
@@ -462,7 +462,7 @@
             document.getElementById('motherboardSerial').textContent = data.motherboard || '——未授权——';
             document.getElementById('cpuSerial').textContent = data.cpu || '——未授权——';
             document.getElementById('diskSerial').textContent = data.disk || '——未授权——';
-            document.getElementById('softwareVersion').textContent = data.version || '1.1.0';
+            document.getElementById('softwareVersion').textContent = data.version || '2.1.0';
             
             // 移除未授权样式
             const values = document.querySelectorAll('.info-value');
