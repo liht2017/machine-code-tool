@@ -23,9 +23,9 @@
 - 支持所有Mac设备 (Intel Mac通过Rosetta 2运行)
 
 ### 银河麒麟
-- 银河麒麟 V10 及以上版本
+- 银河麒麟桌面操作系统 V10 及以上版本
 - 支持 x86_64 和 ARM64 架构
-- 注意：目前仅支持获取MAC地址
+- 图形界面操作，无需命令行
 
 ## 下载和安装
 
@@ -33,10 +33,7 @@
 1. 下载对应平台的可执行文件
 2. Windows: 双击 `.exe` 文件运行即可
 3. macOS: 双击文件运行即可
-4. Linux: 
-   - 安装依赖: `sudo yum install openssl-libs` 或 `sudo apt-get install libssl3`
-   - 添加权限: `chmod +x machine-code-tool-kylin`
-   - 运行程序: `./machine-code-tool-kylin`
+4. 银河麒麟: 右键文件 → 属性 → 权限 → 勾选"允许作为程序执行文件" → 双击运行
 
 ## API接口
 
