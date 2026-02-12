@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+#[allow(unused_imports)]
 use std::process::Command;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;

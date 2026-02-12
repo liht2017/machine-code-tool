@@ -103,40 +103,44 @@ jobs:
         echo "使用Rust原生TLS，无需OpenSSL依赖"
         
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          echo "Linux构建：创建自包含可执行文件，无需用户安装依赖"
-          # 设置静态链接环境变量
-          export RUSTFLAGS="-C target-feature=+crt-static"
-          export PKG_CONFIG_ALL_STATIC=1
-          # 构建
+          echo "Linux构建：标准构建后创建便携包"
+          # 标准构建
           cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose
           
-          echo "后处理：打包依赖库到可执行文件"
-          # 使用AppImage工具创建便携包，但不生成AppImage格式
+          echo "后处理：创建便携包，包含依赖库"
           cd src-tauri/target/${{ matrix.target }}/release/
           
           # 创建便携目录结构
           mkdir -p portable-app/lib
           cp machine-code-tool portable-app/
           
-          # 复制必要的共享库
-          ldd machine-code-tool | grep "=> /" | awk '{print $3}' | grep -E "(webkit|gtk|glib|cairo|pango)" | while read lib; do
-            if [ -f "$lib" ]; then
+          # 分析并复制依赖库
+          echo "分析依赖库..."
+          ldd machine-code-tool | grep "=> /" | awk '{print $3}' | while read lib; do
+            if [ -f "$lib" ] && [[ "$lib" == *"webkit"* || "$lib" == *"gtk"* || "$lib" == *"glib"* || "$lib" == *"cairo"* || "$lib" == *"pango"* || "$lib" == *"gdk"* || "$lib" == *"soup"* || "$lib" == *"javascript"* ]]; then
+              echo "复制库: $lib"
               cp "$lib" portable-app/lib/ 2>/dev/null || true
             fi
           done
           
-          # 创建启动脚本 (使用echo避免YAML heredoc问题)
+          # 创建启动脚本
           echo '#!/bin/bash' > portable-app/machine-code-tool-launcher
           echo 'DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' >> portable-app/machine-code-tool-launcher
           echo 'export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"' >> portable-app/machine-code-tool-launcher
           echo 'exec "$DIR/machine-code-tool" "$@"' >> portable-app/machine-code-tool-launcher
           chmod +x portable-app/machine-code-tool-launcher
           
+          # 显示便携包内容
+          echo "便携包内容:"
+          ls -la portable-app/
+          echo "包含的库:"
+          ls -la portable-app/lib/
+          
           # 打包为tar.gz
           tar -czf machine-code-tool-portable.tar.gz portable-app/
           
           echo "✅ 创建了便携版本"
-          ls -la
+          ls -la *.tar.gz
         else
           cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose
         fi
