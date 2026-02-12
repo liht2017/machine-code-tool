@@ -28,7 +28,7 @@ jobs:
             artifact_name: machine-code-tool
             asset_name: machine-code-tool-macos
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
+            target: x86_64-unknown-linux-gnu
             artifact_name: machine-code-tool
             asset_name: machine-code-tool-kylin
 
@@ -59,10 +59,11 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
-        # 安装musl工具链进行静态编译，无需用户安装任何依赖
-        sudo apt-get install -y musl-tools musl-dev
         # 安装基本构建工具
         sudo apt-get install -y build-essential curl wget pkg-config
+        # 使用较新的Ubuntu版本中的WebKit库，减少兼容性问题
+        sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
+        sudo apt-get install -y libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
 
     - name: 缓存Tauri CLI
       uses: actions/cache@v4
@@ -98,12 +99,9 @@ jobs:
         echo "使用Rust原生TLS，无需OpenSSL依赖"
         
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          echo "Linux构建：静态链接所有依赖，无需用户安装任何库"
-          # 设置静态链接环境变量
-          export PKG_CONFIG_ALL_STATIC=1
-          export RUSTFLAGS="-C target-feature=+crt-static"
-          # 使用musl目标进行完全静态编译
-          cargo tauri build --target x86_64-unknown-linux-musl --no-bundle --verbose
+          echo "Linux构建：使用较新的Ubuntu环境，提供更好的库兼容性"
+          # 使用标准构建，依赖系统库但提供更好兼容性
+          cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose
         else
           cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose
         fi
@@ -208,9 +206,12 @@ jobs:
           echo "" >> upload/使用说明.txt
           echo "💡 提示:" >> upload/使用说明.txt
           echo "- 适用于银河麒麟桌面操作系统" >> upload/使用说明.txt
-          echo "- 程序无需安装任何依赖库，开箱即用" >> upload/使用说明.txt
           echo "- 程序启动后会显示操作界面" >> upload/使用说明.txt
           echo "- 如需关闭程序，点击窗口关闭按钮即可" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "❓ 如果程序无法启动:" >> upload/使用说明.txt
+          echo "可能需要安装WebKit库（大多数系统已预装）：" >> upload/使用说明.txt
+          echo "sudo yum install -y webkit2gtk4.1 或 sudo apt install -y libwebkit2gtk-4.1-0" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
         fi
       shell: bash
