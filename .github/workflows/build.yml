@@ -204,8 +204,9 @@ jobs:
           
           echo "📦 智能收集所有依赖库..."
           
-          # 设置错误容忍
-          set +e  # 允许命令失败而不退出脚本
+          # 设置错误容忍和管道处理
+          set +e          # 允许命令失败而不退出脚本
+          set +o pipefail # 允许管道中的命令失败
           
           # 全面的依赖收集策略（确保无需用户安装任何依赖）
           echo "🔍 分析所有依赖库..."
@@ -283,10 +284,21 @@ jobs:
           
           # 显示一些关键库文件
           echo "📋 关键库文件:"
-          ls -1 portable-app/lib/ | grep -E "(gtk|webkit|glib|cairo)" | head -10 || echo "  (未找到关键GUI库)"
+          if [ -d "portable-app/lib" ]; then
+            # 避免broken pipe，分步执行
+            key_libs=$(ls -1 portable-app/lib/ 2>/dev/null | grep -E "(gtk|webkit|glib|cairo)" 2>/dev/null | head -10)
+            if [ ! -z "$key_libs" ]; then
+              echo "$key_libs"
+            else
+              echo "  (未找到关键GUI库)"
+            fi
+          else
+            echo "  (lib目录不存在)"
+          fi
           
           # 重新启用严格错误检查
           set -e
+          set -o pipefail
           
           # 创建智能启动脚本（无依赖版本）
           echo '#!/bin/bash' > portable-app/machine-code-tool-launcher
@@ -397,14 +409,27 @@ jobs:
           
           # 显示便携包内容
           echo "便携包内容:"
-          ls -la portable-app/
+          ls -la portable-app/ 2>/dev/null || echo "无法列出便携包内容"
           echo "包含的库:"
-          ls -la portable-app/lib/ | head -20
+          # 避免broken pipe，使用更安全的方式
+          ls -1 portable-app/lib/ 2>/dev/null | wc -l | xargs echo "库文件总数:"
+          echo "前20个库文件:"
+          ls -1 portable-app/lib/ 2>/dev/null | head -20 || echo "无法列出库文件"
           
           # 打包为tar.gz
-          tar -czf machine-code-tool-portable.tar.gz portable-app/
-          
-          echo "✅ 超级便携版本创建完成"
+          echo "📦 开始打包便携版本..."
+          if tar -czf machine-code-tool-portable.tar.gz portable-app/; then
+            echo "✅ 超级便携版本创建完成"
+            
+            # 验证打包结果
+            if [ -f "machine-code-tool-portable.tar.gz" ]; then
+              package_size=$(du -sh machine-code-tool-portable.tar.gz 2>/dev/null | cut -f1)
+              echo "📊 便携包大小: $package_size"
+            fi
+          else
+            echo "❌ 便携包打包失败"
+            exit 1
+          fi
           
           # 显示Linux构建产物
           echo "📋 Linux构建产物:"
