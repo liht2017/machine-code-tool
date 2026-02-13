@@ -101,29 +101,23 @@ jobs:
           echo '    perl \' >> alpine-static-build.sh
           echo '    linux-headers' >> alpine-static-build.sh
           echo '' >> alpine-static-build.sh
-          echo '# 安装GTK和WebKit静态开发库' >> alpine-static-build.sh
+          echo '# 安装GTK和WebKit开发库（简化版本）' >> alpine-static-build.sh
           echo 'apk add --no-cache \' >> alpine-static-build.sh
           echo '    gtk+3.0-dev \' >> alpine-static-build.sh
           echo '    webkit2gtk-4.1-dev \' >> alpine-static-build.sh
-          echo '    cairo-dev \' >> alpine-static-build.sh
-          echo '    pango-dev \' >> alpine-static-build.sh
-          echo '    gdk-pixbuf-dev \' >> alpine-static-build.sh
-          echo '    atk-dev \' >> alpine-static-build.sh
-          echo '    glib-dev \' >> alpine-static-build.sh
-          echo '    libsoup3-dev \' >> alpine-static-build.sh
-          echo '    fontconfig-dev \' >> alpine-static-build.sh
-          echo '    freetype-dev \' >> alpine-static-build.sh
-          echo '    harfbuzz-dev \' >> alpine-static-build.sh
-          echo '    libx11-dev \' >> alpine-static-build.sh
-          echo '    libxext-dev \' >> alpine-static-build.sh
-          echo '    libxrender-dev \' >> alpine-static-build.sh
-          echo '    libxi-dev \' >> alpine-static-build.sh
-          echo '    libxrandr-dev \' >> alpine-static-build.sh
-          echo '    libxcursor-dev \' >> alpine-static-build.sh
-          echo '    libxcomposite-dev \' >> alpine-static-build.sh
-          echo '    libxdamage-dev \' >> alpine-static-build.sh
-          echo '    libxfixes-dev \' >> alpine-static-build.sh
-          echo '    libxinerama-dev' >> alpine-static-build.sh
+          echo '    || echo "WebKit安装失败，尝试备用方案..."' >> alpine-static-build.sh
+          echo '' >> alpine-static-build.sh
+          echo '# 如果WebKit安装失败，尝试最小化依赖' >> alpine-static-build.sh
+          echo 'if ! apk info webkit2gtk-4.1-dev >/dev/null 2>&1; then' >> alpine-static-build.sh
+          echo '    echo "使用最小化GTK依赖..."' >> alpine-static-build.sh
+          echo '    apk add --no-cache \' >> alpine-static-build.sh
+          echo '        cairo-dev \' >> alpine-static-build.sh
+          echo '        pango-dev \' >> alpine-static-build.sh
+          echo '        gdk-pixbuf-dev \' >> alpine-static-build.sh
+          echo '        glib-dev \' >> alpine-static-build.sh
+          echo '        fontconfig-dev \' >> alpine-static-build.sh
+          echo '        freetype-dev' >> alpine-static-build.sh
+          echo 'fi' >> alpine-static-build.sh
           echo '' >> alpine-static-build.sh
           echo 'echo "🦀 安装Rust..."' >> alpine-static-build.sh
           echo 'curl --proto="=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable' >> alpine-static-build.sh
