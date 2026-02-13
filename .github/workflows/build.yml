@@ -85,92 +85,89 @@ jobs:
           echo "🐳 创建无任何依赖的静态链接版本"
           
           # 创建Alpine静态构建脚本
-          cat > alpine-static-build.sh << 'ALPINE_EOF'
-#!/bin/sh
-set -e
-
-echo "🏔️ Alpine Linux 静态构建环境初始化"
-echo "📦 安装构建依赖..."
-
-# 更新包管理器
-apk update
-
-# 安装基础构建工具和静态库
-apk add --no-cache \
-    curl \
-    gcc \
-    g++ \
-    musl-dev \
-    musl-static \
-    pkgconfig \
-    make \
-    perl \
-    linux-headers
-
-# 安装GTK和WebKit静态开发库
-apk add --no-cache \
-    gtk+3.0-dev \
-    gtk+3.0-static \
-    webkit2gtk-dev \
-    cairo-dev \
-    cairo-static \
-    pango-dev \
-    gdk-pixbuf-dev \
-    gdk-pixbuf-static \
-    atk-dev \
-    glib-dev \
-    glib-static \
-    libsoup-dev \
-    fontconfig-dev \
-    fontconfig-static \
-    freetype-dev \
-    freetype-static \
-    harfbuzz-dev \
-    harfbuzz-static \
-    libx11-dev \
-    libx11-static \
-    libxext-dev \
-    libxrender-dev \
-    libxi-dev \
-    libxrandr-dev \
-    libxcursor-dev \
-    libxcomposite-dev \
-    libxdamage-dev \
-    libxfixes-dev \
-    libxinerama-dev
-
-echo "🦀 安装Rust..."
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-source ~/.cargo/env
-
-# 添加musl目标
-rustup target add x86_64-unknown-linux-musl
-
-echo "🔧 配置完全静态链接环境..."
-export PKG_CONFIG_ALL_STATIC=1
-export PKG_CONFIG_ALL_LIBS=1
-export RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-static"
-export CC=musl-gcc
-export CXX=musl-g++
-
-# 进入源码目录
-cd /workspace/src-tauri
-
-echo "🚀 开始完全静态构建..."
-cargo tauri build --target x86_64-unknown-linux-musl --no-bundle --verbose
-
-echo "✅ 静态构建完成，验证结果..."
-if [ -f "target/x86_64-unknown-linux-musl/release/machine-code-tool" ]; then
-    echo "📦 构建产物大小："
-    ls -lh target/x86_64-unknown-linux-musl/release/machine-code-tool
-    echo "🔍 验证静态链接（应该显示'not a dynamic executable'）："
-    ldd target/x86_64-unknown-linux-musl/release/machine-code-tool || echo "✅ 完全静态链接成功"
-else
-    echo "❌ 构建失败，未找到可执行文件"
-    exit 1
-fi
-
-ALPINE_EOF
+          echo '#!/bin/sh' > alpine-static-build.sh
+          echo 'set -e' >> alpine-static-build.sh
+          echo '' >> alpine-static-build.sh
+          echo 'echo "🏔️ Alpine Linux 静态构建环境初始化"' >> alpine-static-build.sh
+          echo 'echo "📦 安装构建依赖..."' >> alpine-static-build.sh
+          echo '' >> alpine-static-build.sh
+          echo '# 更新包管理器' >> alpine-static-build.sh
+          echo 'apk update' >> alpine-static-build.sh
+          echo '' >> alpine-static-build.sh
+          echo '# 安装基础构建工具和静态库' >> alpine-static-build.sh
+          echo 'apk add --no-cache \' >> alpine-static-build.sh
+          echo '    curl \' >> alpine-static-build.sh
+          echo '    gcc \' >> alpine-static-build.sh
+          echo '    g++ \' >> alpine-static-build.sh
+          echo '    musl-dev \' >> alpine-static-build.sh
+          echo '    musl-static \' >> alpine-static-build.sh
+          echo '    pkgconfig \' >> alpine-static-build.sh
+          echo '    make \' >> alpine-static-build.sh
+          echo '    perl \' >> alpine-static-build.sh
+          echo '    linux-headers' >> alpine-static-build.sh
+          echo '' >> alpine-static-build.sh
+          echo '# 安装GTK和WebKit静态开发库' >> alpine-static-build.sh
+          echo 'apk add --no-cache \' >> alpine-static-build.sh
+          echo '    gtk+3.0-dev \' >> alpine-static-build.sh
+          echo '    gtk+3.0-static \' >> alpine-static-build.sh
+          echo '    webkit2gtk-dev \' >> alpine-static-build.sh
+          echo '    cairo-dev \' >> alpine-static-build.sh
+          echo '    cairo-static \' >> alpine-static-build.sh
+          echo '    pango-dev \' >> alpine-static-build.sh
+          echo '    gdk-pixbuf-dev \' >> alpine-static-build.sh
+          echo '    gdk-pixbuf-static \' >> alpine-static-build.sh
+          echo '    atk-dev \' >> alpine-static-build.sh
+          echo '    glib-dev \' >> alpine-static-build.sh
+          echo '    glib-static \' >> alpine-static-build.sh
+          echo '    libsoup-dev \' >> alpine-static-build.sh
+          echo '    fontconfig-dev \' >> alpine-static-build.sh
+          echo '    fontconfig-static \' >> alpine-static-build.sh
+          echo '    freetype-dev \' >> alpine-static-build.sh
+          echo '    freetype-static \' >> alpine-static-build.sh
+          echo '    harfbuzz-dev \' >> alpine-static-build.sh
+          echo '    harfbuzz-static \' >> alpine-static-build.sh
+          echo '    libx11-dev \' >> alpine-static-build.sh
+          echo '    libx11-static \' >> alpine-static-build.sh
+          echo '    libxext-dev \' >> alpine-static-build.sh
+          echo '    libxrender-dev \' >> alpine-static-build.sh
+          echo '    libxi-dev \' >> alpine-static-build.sh
+          echo '    libxrandr-dev \' >> alpine-static-build.sh
+          echo '    libxcursor-dev \' >> alpine-static-build.sh
+          echo '    libxcomposite-dev \' >> alpine-static-build.sh
+          echo '    libxdamage-dev \' >> alpine-static-build.sh
+          echo '    libxfixes-dev \' >> alpine-static-build.sh
+          echo '    libxinerama-dev' >> alpine-static-build.sh
+          echo '' >> alpine-static-build.sh
+          echo 'echo "🦀 安装Rust..."' >> alpine-static-build.sh
+          echo 'curl --proto="=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable' >> alpine-static-build.sh
+          echo 'source ~/.cargo/env' >> alpine-static-build.sh
+          echo '' >> alpine-static-build.sh
+          echo '# 添加musl目标' >> alpine-static-build.sh
+          echo 'rustup target add x86_64-unknown-linux-musl' >> alpine-static-build.sh
+          echo '' >> alpine-static-build.sh
+          echo 'echo "🔧 配置完全静态链接环境..."' >> alpine-static-build.sh
+          echo 'export PKG_CONFIG_ALL_STATIC=1' >> alpine-static-build.sh
+          echo 'export PKG_CONFIG_ALL_LIBS=1' >> alpine-static-build.sh
+          echo 'export RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-static"' >> alpine-static-build.sh
+          echo 'export CC=musl-gcc' >> alpine-static-build.sh
+          echo 'export CXX=musl-g++' >> alpine-static-build.sh
+          echo '' >> alpine-static-build.sh
+          echo '# 进入源码目录' >> alpine-static-build.sh
+          echo 'cd /workspace/src-tauri' >> alpine-static-build.sh
+          echo '' >> alpine-static-build.sh
+          echo 'echo "🚀 开始完全静态构建..."' >> alpine-static-build.sh
+          echo 'cargo tauri build --target x86_64-unknown-linux-musl --no-bundle --verbose' >> alpine-static-build.sh
+          echo '' >> alpine-static-build.sh
+          echo 'echo "✅ 静态构建完成，验证结果..."' >> alpine-static-build.sh
+          echo 'if [ -f "target/x86_64-unknown-linux-musl/release/machine-code-tool" ]; then' >> alpine-static-build.sh
+          echo '    echo "📦 构建产物大小："' >> alpine-static-build.sh
+          echo '    ls -lh target/x86_64-unknown-linux-musl/release/machine-code-tool' >> alpine-static-build.sh
+          echo '    echo "🔍 验证静态链接（应该显示not a dynamic executable）："' >> alpine-static-build.sh
+          echo '    ldd target/x86_64-unknown-linux-musl/release/machine-code-tool || echo "✅ 完全静态链接成功"' >> alpine-static-build.sh
+          echo 'else' >> alpine-static-build.sh
+          echo '    echo "❌ 构建失败，未找到可执行文件"' >> alpine-static-build.sh
+          echo '    exit 1' >> alpine-static-build.sh
+          echo 'fi' >> alpine-static-build.sh
 
           chmod +x alpine-static-build.sh
           
