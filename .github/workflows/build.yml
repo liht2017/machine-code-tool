@@ -130,106 +130,17 @@ jobs:
         echo "使用Rust原生TLS，无需OpenSSL依赖"
         
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          echo "🎯 Linux构建：多种方案尝试静态链接"
+          echo "🎯 Linux构建：创建无依赖便携版本"
           
-          # 方案1: 尝试简化的静态链接
-          echo "🔧 方案1: 尝试简化静态链接（仅静态链接Rust部分）..."
-          export RUSTFLAGS="-C target-feature=+crt-static"
+          # 直接使用标准动态链接，然后创建超级便携包
+          echo "🔧 使用标准构建 + 智能便携包（对用户等同于静态链接）"
           
           if cargo tauri build --target x86_64-unknown-linux-gnu --no-bundle --verbose; then
-            echo "✅ 简化静态链接成功"
-            
-            # 检查是否真的减少了依赖
-            echo "🔍 检查依赖情况..."
-            ldd target/x86_64-unknown-linux-gnu/release/machine-code-tool || echo "完全静态链接成功！"
-            
-            # 计算依赖数量
-            dep_count=$(ldd target/x86_64-unknown-linux-gnu/release/machine-code-tool 2>/dev/null | wc -l)
-            if [ $dep_count -lt 20 ]; then
-              echo "✅ 依赖数量较少($dep_count)，接近静态链接效果"
-              STATIC_BUILD=semi_static
-            else
-              echo "⚠️ 依赖数量较多($dep_count)，需要便携包"
-              STATIC_BUILD=portable
-            fi
+            echo "✅ 标准构建成功，开始创建便携包..."
+            STATIC_BUILD=portable
           else
-            echo "❌ 简化静态链接失败，尝试完全静态链接..."
-            
-            # 方案2: 尝试完全静态链接（Alpine方式）
-            echo "🔧 方案2: 使用Alpine Docker进行完全静态链接..."
-            
-            # 创建Alpine构建脚本
-            echo '#!/bin/sh' > alpine-static-build.sh
-            echo 'set -e' >> alpine-static-build.sh
-            echo '' >> alpine-static-build.sh
-            echo 'echo "🐧 Alpine Linux静态构建环境"' >> alpine-static-build.sh
-            echo 'echo "安装依赖..."' >> alpine-static-build.sh
-            echo '' >> alpine-static-build.sh
-            echo '# 更新包管理器' >> alpine-static-build.sh
-            echo 'apk update' >> alpine-static-build.sh
-            echo '' >> alpine-static-build.sh
-            echo '# 安装基础构建工具' >> alpine-static-build.sh
-            echo 'apk add --no-cache curl build-base pkgconfig openssl-dev openssl-libs-static' >> alpine-static-build.sh
-            echo '' >> alpine-static-build.sh
-            echo '# 尝试安装GTK静态库' >> alpine-static-build.sh
-            echo 'apk add --no-cache gtk+3.0-dev webkit2gtk-dev || echo "GTK静态库不可用，继续..."' >> alpine-static-build.sh
-            echo '' >> alpine-static-build.sh
-            echo '# 安装Rust' >> alpine-static-build.sh
-            echo 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable' >> alpine-static-build.sh
-            echo 'source ~/.cargo/env' >> alpine-static-build.sh
-            echo '' >> alpine-static-build.sh
-            echo '# 添加musl目标' >> alpine-static-build.sh
-            echo 'rustup target add x86_64-unknown-linux-musl' >> alpine-static-build.sh
-            echo '' >> alpine-static-build.sh
-            echo '# 安装Tauri CLI' >> alpine-static-build.sh
-            echo 'cargo install tauri-cli --locked' >> alpine-static-build.sh
-            echo '' >> alpine-static-build.sh
-            echo '# 设置静态链接环境' >> alpine-static-build.sh
-            echo 'export PKG_CONFIG_ALL_STATIC=1' >> alpine-static-build.sh
-            echo 'export RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-static"' >> alpine-static-build.sh
-            echo '' >> alpine-static-build.sh
-            echo 'echo "🔧 开始静态构建..."' >> alpine-static-build.sh
-            echo 'cd /workspace/src-tauri' >> alpine-static-build.sh
-            echo '' >> alpine-static-build.sh
-            echo '# 尝试musl静态构建' >> alpine-static-build.sh
-            echo 'if cargo tauri build --target x86_64-unknown-linux-musl --no-bundle --verbose; then' >> alpine-static-build.sh
-            echo '    echo "✅ Alpine musl静态构建成功"' >> alpine-static-build.sh
-            echo '    exit 0' >> alpine-static-build.sh
-            echo 'else' >> alpine-static-build.sh
-            echo '    echo "❌ Alpine静态构建失败"' >> alpine-static-build.sh
-            echo '    exit 1' >> alpine-static-build.sh
-            echo 'fi' >> alpine-static-build.sh
-
-            chmod +x alpine-static-build.sh
-            
-            # 检查Docker是否可用
-            if command -v docker &> /dev/null; then
-              echo "🐳 使用Docker Alpine环境构建..."
-              if docker run --rm -v "$(pwd):/workspace" -w /workspace alpine:latest ./alpine-static-build.sh; then
-                echo "✅ Docker Alpine静态构建成功"
-                STATIC_BUILD=true
-              else
-                echo "❌ Docker Alpine构建失败，回退到便携包..."
-                STATIC_BUILD=portable
-              fi
-            else
-              echo "❌ Docker不可用，回退到便携包..."
-              STATIC_BUILD=portable
-            fi
-          fi
-          
-          # 如果静态链接失败，创建便携包
-          if [ "$STATIC_BUILD" = "portable" ]; then
-            echo "🔄 回退到便携包方案..."
-            # 清理环境
-            unset RUSTFLAGS PKG_CONFIG_ALL_STATIC
-            
-            if cargo tauri build --target x86_64-unknown-linux-gnu --no-bundle --verbose; then
-              echo "✅ 动态链接构建成功，将创建便携包..."
-            else
-              echo "❌ 所有构建方案都失败了"
-              exit 1
-            fi
+            echo "❌ 标准构建失败"
+            exit 1
           fi
           
           echo "后处理：根据构建类型处理文件"
@@ -268,72 +179,14 @@ jobs:
             STATIC_BUILD=partial
           fi
           
-          # 根据构建结果处理文件
-          if [ "$STATIC_BUILD" = "true" ]; then
-            echo "🎉 完全静态链接成功！创建静态版本..."
-            mkdir -p static-app
-            cp machine-code-tool static-app/
-            
-            echo "验证静态链接状态..."
-            if ldd static-app/machine-code-tool | grep -q "not a dynamic executable"; then
-              echo "✅ 确认：完全静态链接"
-            else
-              echo "📊 依赖情况："
-              ldd static-app/machine-code-tool
-            fi
-            
-            # 创建说明文件
-            echo "🎉 静态链接版本" > static-app/README.txt
-            echo "" >> static-app/README.txt
-            echo "此版本为完全静态链接，无需安装任何依赖库！" >> static-app/README.txt
-            echo "" >> static-app/README.txt
-            echo "使用方法：" >> static-app/README.txt
-            echo "1. 双击 machine-code-tool 运行" >> static-app/README.txt
-            echo "2. 如果无法双击，右键 → 属性 → 权限 → 勾选执行权限" >> static-app/README.txt
-            echo "" >> static-app/README.txt
-            echo "特点：" >> static-app/README.txt
-            echo "- 完全无依赖" >> static-app/README.txt
-            echo "- 适用于任何Linux发行版" >> static-app/README.txt
-            echo "- 文件较大但最可靠" >> static-app/README.txt
-
-            tar -czf machine-code-tool-static.tar.gz static-app/
-            echo "✅ 静态版本打包完成"
-            
-          elif [ "$STATIC_BUILD" = "semi_static" ]; then
-            echo "🔧 半静态链接成功！依赖较少..."
-            mkdir -p semi-static-app
-            cp machine-code-tool semi-static-app/
-            
-            echo "📊 依赖分析："
-            ldd semi-static-app/machine-code-tool
-            
-            # 创建说明文件
-            echo "🔧 半静态链接版本" > semi-static-app/README.txt
-            echo "" >> semi-static-app/README.txt
-            echo "此版本大部分库已静态链接，只依赖少量系统库。" >> semi-static-app/README.txt
-            echo "" >> semi-static-app/README.txt
-            echo "使用方法：" >> semi-static-app/README.txt
-            echo "1. 双击 machine-code-tool 运行" >> semi-static-app/README.txt
-            echo "2. 如果提示缺少依赖，安装基础图形库：" >> semi-static-app/README.txt
-            echo "   sudo yum install -y gtk3" >> semi-static-app/README.txt
-            echo "   或 sudo apt install -y libgtk-3-0" >> semi-static-app/README.txt
-            echo "" >> semi-static-app/README.txt
-            echo "特点：" >> semi-static-app/README.txt
-            echo "- 依赖极少" >> semi-static-app/README.txt
-            echo "- 文件较小" >> semi-static-app/README.txt
-            echo "- 兼容性好" >> semi-static-app/README.txt
-
-            tar -czf machine-code-tool-semi-static.tar.gz semi-static-app/
-            echo "✅ 半静态版本打包完成"
-            
-          else
-            echo "🚀 创建完整便携包，包含所有依赖库..."
-            
-            # 创建便携目录结构
-            mkdir -p portable-app/lib
-            cp machine-code-tool portable-app/
-            
-            echo "📦 收集所有依赖库..."
+          # 创建超级便携包（对用户等同于静态链接）
+          echo "🚀 创建超级便携包，包含所有依赖库..."
+          
+          # 创建便携目录结构
+          mkdir -p portable-app/lib
+          cp machine-code-tool portable-app/
+          
+          echo "📦 智能收集所有依赖库..."
           
           # 全面的依赖收集策略（确保无需用户安装任何依赖）
           echo "🔍 分析所有依赖库..."
@@ -402,11 +255,10 @@ jobs:
             fi
           done
           
-            echo "✅ 依赖收集完成！"
-            echo "📊 统计信息："
-            echo "  - 收集的库文件数量: $(ls -1 portable-app/lib/ | wc -l)"
-            echo "  - 便携包总大小: $(du -sh portable-app | cut -f1)"
-          fi
+          echo "✅ 依赖收集完成！"
+          echo "📊 统计信息："
+          echo "  - 收集的库文件数量: $(ls -1 portable-app/lib/ | wc -l)"
+          echo "  - 便携包总大小: $(du -sh portable-app | cut -f1)"
           
           # 创建智能启动脚本（无依赖版本）
           echo '#!/bin/bash' > portable-app/machine-code-tool-launcher
@@ -519,18 +371,19 @@ jobs:
           echo "便携包内容:"
           ls -la portable-app/
           echo "包含的库:"
-          ls -la portable-app/lib/
+          ls -la portable-app/lib/ | head -20
           
-            # 打包为tar.gz
-            tar -czf machine-code-tool-portable.tar.gz portable-app/
-            
-            echo "✅ 创建了便携版本"
+          # 打包为tar.gz
+          tar -czf machine-code-tool-portable.tar.gz portable-app/
+          
+          echo "✅ 超级便携版本创建完成"
           fi
           
           # 显示最终结果
           echo "最终构建产物:"
           ls -la *.tar.gz 2>/dev/null || ls -la machine-code-tool
         else
+          echo "🚀 其他平台构建（Windows/macOS）"
           cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose
         fi
         
@@ -593,30 +446,29 @@ jobs:
             exit 1
           fi
           
-          # 按优先级复制版本
-          if [ -f "$BUILD_DIR/machine-code-tool-static.tar.gz" ]; then
-            echo "🎉 复制完全静态链接版本..."
-            cp "$BUILD_DIR/machine-code-tool-static.tar.gz" upload/${{ matrix.asset_name }}-static.tar.gz
-            echo "✅ Linux静态版本已准备完成（完全无依赖）"
-          elif [ -f "$BUILD_DIR/machine-code-tool-semi-static.tar.gz" ]; then
-            echo "🔧 复制半静态链接版本..."
-            cp "$BUILD_DIR/machine-code-tool-semi-static.tar.gz" upload/${{ matrix.asset_name }}-semi-static.tar.gz
-            echo "✅ Linux半静态版本已准备完成（依赖极少）"
-          elif [ -f "$BUILD_DIR/machine-code-tool-portable.tar.gz" ]; then
-            echo "📦 复制便携版本..."
+          # 复制超级便携版本
+          if [ -f "$BUILD_DIR/machine-code-tool-portable.tar.gz" ]; then
+            echo "📦 复制超级便携版本..."
             cp "$BUILD_DIR/machine-code-tool-portable.tar.gz" upload/${{ matrix.asset_name }}-portable.tar.gz
-            echo "✅ Linux便携版本已准备完成（包含所有依赖库）"
+            echo "✅ Linux无依赖版本已准备完成（包含所有依赖库）"
           else
-            echo "❌ 所有打包方案都失败，使用标准版本..."
+            echo "❌ 便携包创建失败，使用标准版本..."
             cp "$BUILD_DIR/machine-code-tool" upload/${{ matrix.asset_name }}
             chmod +x upload/${{ matrix.asset_name }}
             echo "⚠️ Linux标准版本（需要系统依赖）"
           fi
-        else
+        elif [ "${{ matrix.os }}" = "macos-latest" ]; then
           # macOS: 复制文件并添加执行权限
           cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool upload/${{ matrix.asset_name }}
           chmod +x upload/${{ matrix.asset_name }}
           echo "✅ macOS文件已准备完成"
+        elif [ "${{ matrix.os }}" = "windows-latest" ]; then
+          # Windows: 复制exe文件
+          cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool.exe upload/${{ matrix.asset_name }}.exe
+          echo "✅ Windows文件已准备完成"
+        else
+          echo "❌ 未知平台: ${{ matrix.os }}"
+          exit 1
         fi
         ls -la upload/
       shell: bash
@@ -653,47 +505,8 @@ jobs:
           echo "- 右键点击文件 → 选择'打开'" >> upload/使用说明.txt
           echo "- 或到 系统偏好设置 → 安全性与隐私 → 点击'仍要打开'" >> upload/使用说明.txt
         else
-          # 根据构建结果生成不同的说明
-          if ls upload/*-static.tar.gz >/dev/null 2>&1; then
-            echo "🐧 机器码获取工具 - 银河麒麟版（完全静态版本）" > upload/使用说明.txt
-            echo "===========================================" >> upload/使用说明.txt
-            echo "" >> upload/使用说明.txt
-            echo "🎉 此版本为完全静态链接，真正的零依赖！" >> upload/使用说明.txt
-            echo "" >> upload/使用说明.txt
-            echo "✨ 版本特点:" >> upload/使用说明.txt
-            echo "• 完全静态链接：所有库都编译到程序中" >> upload/使用说明.txt
-            echo "• 真正零依赖：无需安装任何系统库" >> upload/使用说明.txt
-            echo "• 适用于任何Linux发行版" >> upload/使用说明.txt
-            echo "• 文件较大但最可靠" >> upload/使用说明.txt
-            echo "" >> upload/使用说明.txt
-            echo "✅ 使用方法:" >> upload/使用说明.txt
-            echo "1. 解压文件: 右键点击 .tar.gz 文件 → 解压" >> upload/使用说明.txt
-            echo "2. 进入解压后的 static-app 文件夹" >> upload/使用说明.txt
-            echo "3. 双击 machine-code-tool 启动程序" >> upload/使用说明.txt
-            echo "" >> upload/使用说明.txt
-            echo "💡 如果双击无效:" >> upload/使用说明.txt
-            echo "右键点击文件 → 属性 → 权限 → 勾选"允许作为程序执行" → 再次双击" >> upload/使用说明.txt
-          elif ls upload/*-semi-static.tar.gz >/dev/null 2>&1; then
-            echo "🐧 机器码获取工具 - 银河麒麟版（半静态版本）" > upload/使用说明.txt
-            echo "=========================================" >> upload/使用说明.txt
-            echo "" >> upload/使用说明.txt
-            echo "🔧 此版本为半静态链接，依赖极少！" >> upload/使用说明.txt
-            echo "" >> upload/使用说明.txt
-            echo "✨ 版本特点:" >> upload/使用说明.txt
-            echo "• 大部分库已静态链接" >> upload/使用说明.txt
-            echo "• 只依赖少量基础系统库" >> upload/使用说明.txt
-            echo "• 文件较小，兼容性好" >> upload/使用说明.txt
-            echo "• 适用于大多数Linux系统" >> upload/使用说明.txt
-            echo "" >> upload/使用说明.txt
-            echo "✅ 使用方法:" >> upload/使用说明.txt
-            echo "1. 解压文件: 右键点击 .tar.gz 文件 → 解压" >> upload/使用说明.txt
-            echo "2. 进入解压后的 semi-static-app 文件夹" >> upload/使用说明.txt
-            echo "3. 双击 machine-code-tool 启动程序" >> upload/使用说明.txt
-            echo "" >> upload/使用说明.txt
-            echo "💡 如果提示缺少依赖:" >> upload/使用说明.txt
-            echo "sudo yum install -y gtk3" >> upload/使用说明.txt
-            echo "或者: sudo apt install -y libgtk-3-0" >> upload/使用说明.txt
-          elif ls upload/*-portable.tar.gz >/dev/null 2>&1; then
+          # 根据构建结果生成说明
+          if ls upload/*-portable.tar.gz >/dev/null 2>&1; then
             echo "🐧 机器码获取工具 - 银河麒麟版（无依赖版本）" > upload/使用说明.txt
             echo "========================================" >> upload/使用说明.txt
             echo "" >> upload/使用说明.txt
