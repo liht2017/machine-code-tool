@@ -17,11 +17,8 @@ jobs:
             target: x86_64-unknown-linux-gnu
             asset_name: machine-code-tool-kylin
           - os: macos-latest
-            target: aarch64-apple-darwin
-            asset_name: machine-code-tool-macos-arm
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            asset_name: machine-code-tool-macos-intel
+            target: universal-apple-darwin
+            asset_name: machine-code-tool-macos
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             asset_name: machine-code-tool-windows
@@ -34,7 +31,7 @@ jobs:
     - name: 安装Rust
       uses: dtolnay/rust-toolchain@stable
       with:
-        targets: ${{ matrix.target }}
+        targets: ${{ matrix.target == 'universal-apple-darwin' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.target }}
 
     - name: 缓存Cargo依赖
       uses: actions/cache@v4
@@ -45,14 +42,13 @@ jobs:
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: 安装系统依赖 (Ubuntu)
+    - name: 检查Docker环境 (Ubuntu)
       if: matrix.os == 'ubuntu-latest'
       run: |
-        sudo apt-get update
-        # 只安装Docker，用于Alpine静态构建
-        sudo apt-get install -y docker.io
-        sudo systemctl start docker
-        sudo usermod -aG docker $USER
+        echo "🐳 检查Docker环境..."
+        docker --version
+        docker info || sudo docker info
+        echo "✅ Docker环境检查完成"
 
     - name: 安装系统依赖 (macOS)
       if: matrix.os == 'macos-latest'
@@ -172,11 +168,21 @@ jobs:
           chmod +x alpine-static-build.sh
           
           echo "🐳 启动Alpine容器进行静态构建..."
-          docker run --rm \
+          # 尝试直接运行Docker，如果失败则使用sudo
+          if docker run --rm \
             -v "$(pwd):/workspace" \
             -w /workspace \
             alpine:latest \
-            ./alpine-static-build.sh
+            ./alpine-static-build.sh 2>/dev/null; then
+            echo "✅ Docker运行成功"
+          else
+            echo "🔧 使用sudo运行Docker..."
+            sudo docker run --rm \
+              -v "$(pwd):/workspace" \
+              -w /workspace \
+              alpine:latest \
+              ./alpine-static-build.sh
+          fi
             
           echo "✅ Alpine静态构建完成"
           
@@ -214,11 +220,34 @@ jobs:
           # 显示Linux构建产物
           echo "📋 Linux构建产物:"
           ls -la machine-code-tool-kylin-static 使用说明.txt 2>/dev/null || echo "静态构建产物检查完成"
+        elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+          echo "🍎 macOS构建：创建通用二进制文件"
+          
+          # 构建两种架构
+          echo "📦 构建Apple Silicon版本..."
+          cargo tauri build --target aarch64-apple-darwin --no-bundle --verbose
+          
+          echo "📦 构建Intel版本..."
+          cargo tauri build --target x86_64-apple-darwin --no-bundle --verbose
+          
+          # 创建通用二进制文件
+          echo "🔧 创建通用二进制文件..."
+          lipo -create \
+            target/aarch64-apple-darwin/release/machine-code-tool \
+            target/x86_64-apple-darwin/release/machine-code-tool \
+            -output machine-code-tool-universal
+          
+          # 验证通用二进制文件
+          echo "🔍 验证通用二进制文件："
+          lipo -info machine-code-tool-universal
+          file machine-code-tool-universal
+          
+          echo "✅ macOS通用版本创建完成"
         else
-          echo "🚀 其他平台构建（Windows/macOS）"
+          echo "🚀 Windows构建"
           cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose
           
-          # 显示其他平台构建产物
+          # 显示构建产物
           echo "📋 构建产物:"
           ls -la target/${{ matrix.target }}/release/machine-code-tool* 2>/dev/null || echo "构建产物检查完成"
         fi
@@ -242,10 +271,15 @@ jobs:
             exit 1
           fi
         elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-          # macOS: 复制文件并添加执行权限
-          cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool upload/${{ matrix.asset_name }}
-          chmod +x upload/${{ matrix.asset_name }}
-          echo "✅ macOS文件已准备完成"
+          # macOS: 复制通用二进制文件
+          if [ -f "machine-code-tool-universal" ]; then
+            cp machine-code-tool-universal upload/${{ matrix.asset_name }}
+            chmod +x upload/${{ matrix.asset_name }}
+            echo "✅ macOS通用版本文件已准备完成"
+          else
+            echo "❌ 未找到macOS通用二进制文件"
+            exit 1
+          fi
         elif [ "${{ matrix.os }}" = "windows-latest" ]; then
           # Windows: 复制exe文件
           cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool.exe upload/${{ matrix.asset_name }}.exe
@@ -270,8 +304,10 @@ jobs:
           echo "📝 版本：2.1.0" >> upload/使用说明.txt
           
         elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-          echo "🍎 机器码获取工具 - macOS版" > upload/使用说明.txt
-          echo "=========================" >> upload/使用说明.txt
+          echo "🍎 机器码获取工具 - macOS版（通用版本）" > upload/使用说明.txt
+          echo "=================================" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "🎉 此版本同时支持Intel和Apple Silicon芯片！" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "💻 使用方法：" >> upload/使用说明.txt
           echo "双击 ${{ matrix.asset_name }} 即可运行" >> upload/使用说明.txt
@@ -282,7 +318,7 @@ jobs:
           echo "2. 或在终端运行：xattr -rd com.apple.quarantine ${{ matrix.asset_name }}" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "✨ 功能：获取机器硬件信息，提供投标API服务" >> upload/使用说明.txt
-          echo "📝 版本：2.1.0" >> upload/使用说明.txt
+          echo "📝 版本：2.1.0（通用版本）" >> upload/使用说明.txt
         fi
       shell: bash
 
@@ -334,8 +370,7 @@ jobs:
           
           ### 📦 下载说明
           - **Windows用户**：下载 `machine-code-tool-windows.zip`
-          - **macOS用户（Apple芯片）**：下载 `machine-code-tool-macos-arm.zip`  
-          - **macOS用户（Intel芯片）**：下载 `machine-code-tool-macos-intel.zip`
+          - **macOS用户**：下载 `machine-code-tool-macos.zip`（通用版本，支持Intel和Apple Silicon）
           - **银河麒麟用户**：下载 `machine-code-tool-kylin-static.zip`（静态链接，无依赖）
           
           ### ✨ 功能特性
