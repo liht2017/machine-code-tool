@@ -218,12 +218,8 @@ jobs:
           echo "📦 第一轮：收集直接依赖..."
           while read lib; do
             if [ -f "$lib" ] && [ ! -z "$lib" ]; then
-              # 只排除最核心的系统库，其他都复制
+              # 更宽松的过滤策略，只排除最基础的C库
               if [[ "$lib" != "/lib/x86_64-linux-gnu/libc.so"* && \
-                    "$lib" != "/lib/x86_64-linux-gnu/libdl.so"* && \
-                    "$lib" != "/lib/x86_64-linux-gnu/libpthread.so"* && \
-                    "$lib" != "/lib/x86_64-linux-gnu/libm.so"* && \
-                    "$lib" != "/lib/x86_64-linux-gnu/librt.so"* && \
                     "$lib" != "/lib64/ld-linux-x86-64.so"* ]]; then
                 
                 libname=$(basename "$lib")
@@ -252,12 +248,8 @@ jobs:
                   
                   # 检查是否已复制
                   if [ ! -f "portable-app/lib/$sublibname" ]; then
-                    # 核心系统库过滤
+                    # 更宽松的过滤策略，只排除最基础的C库
                     if [[ "$sublib" != "/lib/x86_64-linux-gnu/libc.so"* && \
-                          "$sublib" != "/lib/x86_64-linux-gnu/libdl.so"* && \
-                          "$sublib" != "/lib/x86_64-linux-gnu/libpthread.so"* && \
-                          "$sublib" != "/lib/x86_64-linux-gnu/libm.so"* && \
-                          "$sublib" != "/lib/x86_64-linux-gnu/librt.so"* && \
                           "$sublib" != "/lib64/ld-linux-x86-64.so"* ]]; then
                       echo "      📦 复制间接依赖: $sublib"
                       cp "$sublib" portable-app/lib/ 2>/dev/null || echo "      ⚠️ 复制失败: $sublib"
@@ -326,7 +318,8 @@ jobs:
           echo 'echo "📚 库文件数量: $(ls -1 "$DIR/lib" | wc -l)"' >> portable-app/machine-code-tool-launcher
           echo '' >> portable-app/machine-code-tool-launcher
           echo '# 设置库路径（优先使用我们的库）' >> portable-app/machine-code-tool-launcher
-          echo 'export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"' >> portable-app/machine-code-tool-launcher
+          echo 'export LD_LIBRARY_PATH="$DIR/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH"' >> portable-app/machine-code-tool-launcher
+          echo 'export LD_PRELOAD=""' >> portable-app/machine-code-tool-launcher
           echo '' >> portable-app/machine-code-tool-launcher
           echo '# 设置其他可能需要的环境变量' >> portable-app/machine-code-tool-launcher
           echo 'export PKG_CONFIG_PATH="$DIR/lib/pkgconfig:$PKG_CONFIG_PATH"' >> portable-app/machine-code-tool-launcher
@@ -340,6 +333,10 @@ jobs:
           echo '' >> portable-app/machine-code-tool-launcher
           echo '# 显示环境信息（调试用）' >> portable-app/machine-code-tool-launcher
           echo 'echo "🔧 LD_LIBRARY_PATH: ${LD_LIBRARY_PATH:0:100}..."' >> portable-app/machine-code-tool-launcher
+          echo '' >> portable-app/machine-code-tool-launcher
+          echo '# 检查glibc兼容性' >> portable-app/machine-code-tool-launcher
+          echo 'echo "🔍 检查系统兼容性..."' >> portable-app/machine-code-tool-launcher
+          echo 'ldd --version 2>/dev/null | head -1 || echo "无法检查glibc版本"' >> portable-app/machine-code-tool-launcher
           echo '' >> portable-app/machine-code-tool-launcher
           echo '# 启动程序' >> portable-app/machine-code-tool-launcher
           echo 'echo "▶️  启动程序..."' >> portable-app/machine-code-tool-launcher
@@ -380,6 +377,7 @@ jobs:
           echo 'export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"' >> portable-app/check-deps.sh
           echo '' >> portable-app/check-deps.sh
           echo 'if [ -f "$DIR/machine-code-tool" ]; then' >> portable-app/check-deps.sh
+          echo '    export LD_LIBRARY_PATH="$DIR/lib:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH"' >> portable-app/check-deps.sh
           echo '    missing_deps=$(ldd "$DIR/machine-code-tool" 2>/dev/null | grep "not found" | wc -l)' >> portable-app/check-deps.sh
           echo '    if [ $missing_deps -eq 0 ]; then' >> portable-app/check-deps.sh
           echo '        echo "  ✅ 所有依赖库都已满足"' >> portable-app/check-deps.sh
@@ -387,10 +385,14 @@ jobs:
           echo '        echo "  ❌ 发现 $missing_deps 个缺失的依赖:"' >> portable-app/check-deps.sh
           echo '        ldd "$DIR/machine-code-tool" 2>/dev/null | grep "not found"' >> portable-app/check-deps.sh
           echo '        echo ""' >> portable-app/check-deps.sh
+          echo '        echo "🔍 glibc版本检查:"' >> portable-app/check-deps.sh
+          echo '        ldd --version 2>/dev/null | head -1 || echo "无法检查glibc版本"' >> portable-app/check-deps.sh
+          echo '        echo ""' >> portable-app/check-deps.sh
           echo '        echo "💡 解决方案:"' >> portable-app/check-deps.sh
-          echo '        echo "  1. 检查系统是否安装了基础图形库"' >> portable-app/check-deps.sh
-          echo '        echo "  2. 尝试安装: sudo yum install -y gtk3 webkit2gtk3"' >> portable-app/check-deps.sh
-          echo '        echo "  3. 或者: sudo apt install -y libgtk-3-0 libwebkit2gtk-4.1-0"' >> portable-app/check-deps.sh
+          echo '        echo "  1. 系统glibc版本可能过低，需要2.32+版本"' >> portable-app/check-deps.sh
+          echo '        echo "  2. 尝试安装: sudo yum install -y glibc gtk3 webkit2gtk3"' >> portable-app/check-deps.sh
+          echo '        echo "  3. 或者: sudo apt install -y libc6 libgtk-3-0 libwebkit2gtk-4.1-0"' >> portable-app/check-deps.sh
+          echo '        echo "  4. 如果是麒麟系统，可能需要升级到更新版本"' >> portable-app/check-deps.sh
           echo '    fi' >> portable-app/check-deps.sh
           echo 'else' >> portable-app/check-deps.sh
           echo '    echo "  ❌ 无法检查依赖 (主程序不存在)"' >> portable-app/check-deps.sh
@@ -584,9 +586,14 @@ jobs:
             echo "💡 如果双击无效（设置执行权限）:" >> upload/使用说明.txt
             echo "右键点击 machine-code-tool-launcher → 属性 → 权限 → 勾选"允许作为程序执行" → 再次双击" >> upload/使用说明.txt
             echo "" >> upload/使用说明.txt
-            echo "🔧 故障排除（极少数情况）:" >> upload/使用说明.txt
+            echo "🔧 故障排除:" >> upload/使用说明.txt
             echo "1. 双击 check-deps.sh 检查依赖状态" >> upload/使用说明.txt
-            echo "2. 如果仍有问题，可能需要安装最基础的系统库" >> upload/使用说明.txt
+            echo "2. 如果提示glibc版本问题：" >> upload/使用说明.txt
+            echo "   - 检查系统版本：cat /etc/os-release" >> upload/使用说明.txt
+            echo "   - 麒麟系统建议V10 SP2或更新版本" >> upload/使用说明.txt
+            echo "   - 或安装兼容库：sudo yum install -y glibc" >> upload/使用说明.txt
+            echo "3. 如果提示缺少图形库：" >> upload/使用说明.txt
+            echo "   sudo yum install -y gtk3 webkit2gtk3 libX11" >> upload/使用说明.txt
             echo "" >> upload/使用说明.txt
             echo "💪 优势说明:" >> upload/使用说明.txt
             echo "相比传统版本需要用户安装 webkit2gtk、gtk3 等依赖，" >> upload/使用说明.txt
