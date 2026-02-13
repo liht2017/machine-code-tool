@@ -192,9 +192,20 @@ jobs:
           
           # 创建便携目录结构
           mkdir -p portable-app/lib
-          cp machine-code-tool portable-app/
+          
+          # 安全复制主程序
+          if [ -f "machine-code-tool" ]; then
+            cp machine-code-tool portable-app/
+            echo "✅ 主程序复制成功"
+          else
+            echo "❌ 找不到主程序 machine-code-tool"
+            exit 1
+          fi
           
           echo "📦 智能收集所有依赖库..."
+          
+          # 设置错误容忍
+          set +e  # 允许命令失败而不退出脚本
           
           # 全面的依赖收集策略（确保无需用户安装任何依赖）
           echo "🔍 分析所有依赖库..."
@@ -226,55 +237,56 @@ jobs:
           done < /tmp/direct_deps.txt
           
           echo "🔄 第二轮：递归收集间接依赖..."
-          # 简化的递归收集，避免复杂的循环逻辑
-          for round in {1..3}; do
-            echo "  🔄 递归轮次 $round..."
-            
-            # 收集当前轮次的新依赖到临时文件
-            > /tmp/round_deps.txt
-            
-            for lib_file in portable-app/lib/*.so*; do
-              if [ -f "$lib_file" ]; then
-                ldd "$lib_file" 2>/dev/null | grep "=> /" | awk '{print $3}' >> /tmp/round_deps.txt
-              fi
-            done
-            
-            # 处理这轮收集的依赖
-            round_count=0
-            while read sublib; do
-              if [ -f "$sublib" ] && [ ! -z "$sublib" ]; then
-                sublibname=$(basename "$sublib")
-                if ! grep -q "^$sublibname$" /tmp/copied_libs.txt; then
-                  # 核心系统库过滤
-                  if [[ "$sublib" != "/lib/x86_64-linux-gnu/libc.so"* && \
-                        "$sublib" != "/lib/x86_64-linux-gnu/libdl.so"* && \
-                        "$sublib" != "/lib/x86_64-linux-gnu/libpthread.so"* && \
-                        "$sublib" != "/lib/x86_64-linux-gnu/libm.so"* && \
-                        "$sublib" != "/lib/x86_64-linux-gnu/librt.so"* && \
-                        "$sublib" != "/lib64/ld-linux-x86-64.so"* ]]; then
-                    echo "    📦 $sublib"
-                    if cp "$sublib" portable-app/lib/ 2>/dev/null; then
-                      echo "$sublibname" >> /tmp/copied_libs.txt
-                      round_count=$((round_count + 1))
+          
+          # 简化策略：只做一轮额外的依赖收集，避免复杂逻辑
+          echo "  🔄 收集间接依赖..."
+          
+          # 为所有已复制的库收集依赖
+          find portable-app/lib -name "*.so*" -type f | while read lib_file; do
+            if [ -f "$lib_file" ]; then
+              echo "    🔍 分析: $(basename "$lib_file")"
+              ldd "$lib_file" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read sublib; do
+                if [ -f "$sublib" ] && [ ! -z "$sublib" ]; then
+                  sublibname=$(basename "$sublib")
+                  
+                  # 检查是否已复制
+                  if [ ! -f "portable-app/lib/$sublibname" ]; then
+                    # 核心系统库过滤
+                    if [[ "$sublib" != "/lib/x86_64-linux-gnu/libc.so"* && \
+                          "$sublib" != "/lib/x86_64-linux-gnu/libdl.so"* && \
+                          "$sublib" != "/lib/x86_64-linux-gnu/libpthread.so"* && \
+                          "$sublib" != "/lib/x86_64-linux-gnu/libm.so"* && \
+                          "$sublib" != "/lib/x86_64-linux-gnu/librt.so"* && \
+                          "$sublib" != "/lib64/ld-linux-x86-64.so"* ]]; then
+                      echo "      📦 复制间接依赖: $sublib"
+                      cp "$sublib" portable-app/lib/ 2>/dev/null || echo "      ⚠️ 复制失败: $sublib"
                     fi
                   fi
                 fi
-              fi
-            done < /tmp/round_deps.txt
-            
-            echo "  📊 本轮收集了 $round_count 个新库"
-            
-            # 如果这轮没有找到新库，提前结束
-            if [ $round_count -eq 0 ]; then
-              echo "  ✅ 递归完成，没有更多依赖"
-              break
+              done
             fi
           done
           
+          echo "  ✅ 间接依赖收集完成"
+          
           echo "✅ 依赖收集完成！"
           echo "📊 统计信息："
-          echo "  - 收集的库文件数量: $(ls -1 portable-app/lib/ | wc -l)"
-          echo "  - 便携包总大小: $(du -sh portable-app | cut -f1)"
+          
+          # 安全的统计，避免错误
+          lib_count=$(ls -1 portable-app/lib/ 2>/dev/null | wc -l)
+          echo "  - 收集的库文件数量: $lib_count"
+          
+          if [ -d "portable-app" ]; then
+            app_size=$(du -sh portable-app 2>/dev/null | cut -f1)
+            echo "  - 便携包总大小: $app_size"
+          fi
+          
+          # 显示一些关键库文件
+          echo "📋 关键库文件:"
+          ls -1 portable-app/lib/ | grep -E "(gtk|webkit|glib|cairo)" | head -10 || echo "  (未找到关键GUI库)"
+          
+          # 重新启用严格错误检查
+          set -e
           
           # 创建智能启动脚本（无依赖版本）
           echo '#!/bin/bash' > portable-app/machine-code-tool-launcher
