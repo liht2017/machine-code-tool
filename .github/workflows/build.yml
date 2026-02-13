@@ -96,7 +96,6 @@ jobs:
           echo '    gcc \' >> alpine-static-build.sh
           echo '    g++ \' >> alpine-static-build.sh
           echo '    musl-dev \' >> alpine-static-build.sh
-          echo '    musl-static \' >> alpine-static-build.sh
           echo '    pkgconfig \' >> alpine-static-build.sh
           echo '    make \' >> alpine-static-build.sh
           echo '    perl \' >> alpine-static-build.sh
@@ -105,25 +104,17 @@ jobs:
           echo '# 安装GTK和WebKit静态开发库' >> alpine-static-build.sh
           echo 'apk add --no-cache \' >> alpine-static-build.sh
           echo '    gtk+3.0-dev \' >> alpine-static-build.sh
-          echo '    gtk+3.0-static \' >> alpine-static-build.sh
-          echo '    webkit2gtk-dev \' >> alpine-static-build.sh
+          echo '    webkit2gtk-4.1-dev \' >> alpine-static-build.sh
           echo '    cairo-dev \' >> alpine-static-build.sh
-          echo '    cairo-static \' >> alpine-static-build.sh
           echo '    pango-dev \' >> alpine-static-build.sh
           echo '    gdk-pixbuf-dev \' >> alpine-static-build.sh
-          echo '    gdk-pixbuf-static \' >> alpine-static-build.sh
           echo '    atk-dev \' >> alpine-static-build.sh
           echo '    glib-dev \' >> alpine-static-build.sh
-          echo '    glib-static \' >> alpine-static-build.sh
-          echo '    libsoup-dev \' >> alpine-static-build.sh
+          echo '    libsoup3-dev \' >> alpine-static-build.sh
           echo '    fontconfig-dev \' >> alpine-static-build.sh
-          echo '    fontconfig-static \' >> alpine-static-build.sh
           echo '    freetype-dev \' >> alpine-static-build.sh
-          echo '    freetype-static \' >> alpine-static-build.sh
           echo '    harfbuzz-dev \' >> alpine-static-build.sh
-          echo '    harfbuzz-static \' >> alpine-static-build.sh
           echo '    libx11-dev \' >> alpine-static-build.sh
-          echo '    libx11-static \' >> alpine-static-build.sh
           echo '    libxext-dev \' >> alpine-static-build.sh
           echo '    libxrender-dev \' >> alpine-static-build.sh
           echo '    libxi-dev \' >> alpine-static-build.sh
