@@ -129,10 +129,19 @@ jobs:
           echo 'rustup target add x86_64-unknown-linux-musl' >> alpine-static-build.sh
           echo 'rustup target add x86_64-unknown-linux-gnu' >> alpine-static-build.sh
           echo '' >> alpine-static-build.sh
-          echo 'echo "🔧 先用glibc目标安装Tauri CLI..."' >> alpine-static-build.sh
-          echo '# 临时使用glibc目标安装CLI，避免proc-macro问题' >> alpine-static-build.sh
-          echo 'export RUSTFLAGS=""' >> alpine-static-build.sh
-          echo 'cargo install tauri-cli --locked --target x86_64-unknown-linux-gnu || echo "CLI安装失败，尝试其他方式"' >> alpine-static-build.sh
+          echo 'echo "🔧 下载预编译的Tauri CLI..."' >> alpine-static-build.sh
+          echo '# 直接下载预编译版本，避免编译问题' >> alpine-static-build.sh
+          echo 'curl -L https://github.com/tauri-apps/tauri/releases/download/tauri-cli-v2.10.0/tauri-cli-x86_64-unknown-linux-musl.tar.gz -o tauri-cli.tar.gz' >> alpine-static-build.sh
+          echo 'if [ -f "tauri-cli.tar.gz" ]; then' >> alpine-static-build.sh
+          echo '    tar -xzf tauri-cli.tar.gz' >> alpine-static-build.sh
+          echo '    chmod +x cargo-tauri' >> alpine-static-build.sh
+          echo '    mv cargo-tauri ~/.cargo/bin/' >> alpine-static-build.sh
+          echo '    echo "✅ 预编译Tauri CLI安装成功"' >> alpine-static-build.sh
+          echo 'else' >> alpine-static-build.sh
+          echo '    echo "⚠️ 预编译版本下载失败，尝试源码编译..."' >> alpine-static-build.sh
+          echo '    unset RUSTFLAGS' >> alpine-static-build.sh
+          echo '    cargo install tauri-cli --locked' >> alpine-static-build.sh
+          echo 'fi' >> alpine-static-build.sh
           echo '' >> alpine-static-build.sh
           echo 'echo "🔧 配置静态链接环境用于最终构建..."' >> alpine-static-build.sh
           echo 'export PKG_CONFIG_ALL_STATIC=1' >> alpine-static-build.sh
