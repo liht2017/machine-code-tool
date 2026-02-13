@@ -150,6 +150,9 @@ jobs:
           echo 'fi' >> alpine-static-build.sh
           echo 'echo "最终工作目录: $(pwd)"' >> alpine-static-build.sh
           echo '' >> alpine-static-build.sh
+          echo 'echo "🚀 安装Tauri CLI..."' >> alpine-static-build.sh
+          echo 'cargo install tauri-cli --locked' >> alpine-static-build.sh
+          echo '' >> alpine-static-build.sh
           echo 'echo "🚀 开始完全静态构建..."' >> alpine-static-build.sh
           echo 'cargo tauri build --target x86_64-unknown-linux-musl --no-bundle --verbose' >> alpine-static-build.sh
           echo '' >> alpine-static-build.sh
@@ -236,6 +239,9 @@ jobs:
             target/x86_64-apple-darwin/release/machine-code-tool \
             -output machine-code-tool-universal
           
+          echo "📁 验证文件位置："
+          ls -la machine-code-tool-universal
+          
           # 验证通用二进制文件
           echo "🔍 验证通用二进制文件："
           lipo -info machine-code-tool-universal
@@ -271,12 +277,14 @@ jobs:
           fi
         elif [ "${{ matrix.os }}" = "macos-latest" ]; then
           # macOS: 复制通用二进制文件
-          if [ -f "machine-code-tool-universal" ]; then
-            cp machine-code-tool-universal upload/${{ matrix.asset_name }}
+          if [ -f "src-tauri/machine-code-tool-universal" ]; then
+            cp src-tauri/machine-code-tool-universal upload/${{ matrix.asset_name }}
             chmod +x upload/${{ matrix.asset_name }}
             echo "✅ macOS通用版本文件已准备完成"
           else
             echo "❌ 未找到macOS通用二进制文件"
+            echo "检查可用文件："
+            find . -name "machine-code-tool*" -type f 2>/dev/null || echo "未找到任何machine-code-tool文件"
             exit 1
           fi
         elif [ "${{ matrix.os }}" = "windows-latest" ]; then
