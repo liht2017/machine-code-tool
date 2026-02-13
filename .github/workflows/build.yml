@@ -159,56 +159,46 @@ jobs:
             echo "🔧 方案2: 使用Alpine Docker进行完全静态链接..."
             
             # 创建Alpine构建脚本
-            cat > alpine-static-build.sh << 'ALPINE_EOF'
-#!/bin/sh
-set -e
-
-echo "🐧 Alpine Linux静态构建环境"
-echo "安装依赖..."
-
-# 更新包管理器
-apk update
-
-# 安装基础构建工具
-apk add --no-cache \
-    curl \
-    build-base \
-    pkgconfig \
-    openssl-dev \
-    openssl-libs-static
-
-# 尝试安装GTK静态库（如果可用）
-apk add --no-cache \
-    gtk+3.0-dev \
-    webkit2gtk-dev \
-    || echo "GTK静态库不可用，继续..."
-
-# 安装Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-source ~/.cargo/env
-
-# 添加musl目标
-rustup target add x86_64-unknown-linux-musl
-
-# 安装Tauri CLI
-cargo install tauri-cli --locked
-
-# 设置静态链接环境
-export PKG_CONFIG_ALL_STATIC=1
-export RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-static"
-
-echo "🔧 开始静态构建..."
-cd /workspace/src-tauri
-
-# 尝试musl静态构建
-if cargo tauri build --target x86_64-unknown-linux-musl --no-bundle --verbose; then
-    echo "✅ Alpine musl静态构建成功"
-    exit 0
-else
-    echo "❌ Alpine静态构建失败"
-    exit 1
-fi
-ALPINE_EOF
+            echo '#!/bin/sh' > alpine-static-build.sh
+            echo 'set -e' >> alpine-static-build.sh
+            echo '' >> alpine-static-build.sh
+            echo 'echo "🐧 Alpine Linux静态构建环境"' >> alpine-static-build.sh
+            echo 'echo "安装依赖..."' >> alpine-static-build.sh
+            echo '' >> alpine-static-build.sh
+            echo '# 更新包管理器' >> alpine-static-build.sh
+            echo 'apk update' >> alpine-static-build.sh
+            echo '' >> alpine-static-build.sh
+            echo '# 安装基础构建工具' >> alpine-static-build.sh
+            echo 'apk add --no-cache curl build-base pkgconfig openssl-dev openssl-libs-static' >> alpine-static-build.sh
+            echo '' >> alpine-static-build.sh
+            echo '# 尝试安装GTK静态库' >> alpine-static-build.sh
+            echo 'apk add --no-cache gtk+3.0-dev webkit2gtk-dev || echo "GTK静态库不可用，继续..."' >> alpine-static-build.sh
+            echo '' >> alpine-static-build.sh
+            echo '# 安装Rust' >> alpine-static-build.sh
+            echo 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable' >> alpine-static-build.sh
+            echo 'source ~/.cargo/env' >> alpine-static-build.sh
+            echo '' >> alpine-static-build.sh
+            echo '# 添加musl目标' >> alpine-static-build.sh
+            echo 'rustup target add x86_64-unknown-linux-musl' >> alpine-static-build.sh
+            echo '' >> alpine-static-build.sh
+            echo '# 安装Tauri CLI' >> alpine-static-build.sh
+            echo 'cargo install tauri-cli --locked' >> alpine-static-build.sh
+            echo '' >> alpine-static-build.sh
+            echo '# 设置静态链接环境' >> alpine-static-build.sh
+            echo 'export PKG_CONFIG_ALL_STATIC=1' >> alpine-static-build.sh
+            echo 'export RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-static"' >> alpine-static-build.sh
+            echo '' >> alpine-static-build.sh
+            echo 'echo "🔧 开始静态构建..."' >> alpine-static-build.sh
+            echo 'cd /workspace/src-tauri' >> alpine-static-build.sh
+            echo '' >> alpine-static-build.sh
+            echo '# 尝试musl静态构建' >> alpine-static-build.sh
+            echo 'if cargo tauri build --target x86_64-unknown-linux-musl --no-bundle --verbose; then' >> alpine-static-build.sh
+            echo '    echo "✅ Alpine musl静态构建成功"' >> alpine-static-build.sh
+            echo '    exit 0' >> alpine-static-build.sh
+            echo 'else' >> alpine-static-build.sh
+            echo '    echo "❌ Alpine静态构建失败"' >> alpine-static-build.sh
+            echo '    exit 1' >> alpine-static-build.sh
+            echo 'fi' >> alpine-static-build.sh
 
             chmod +x alpine-static-build.sh
             
@@ -293,20 +283,18 @@ ALPINE_EOF
             fi
             
             # 创建说明文件
-            cat > static-app/README.txt << 'STATIC_README'
-🎉 静态链接版本
-
-此版本为完全静态链接，无需安装任何依赖库！
-
-使用方法：
-1. 双击 machine-code-tool 运行
-2. 如果无法双击，右键 → 属性 → 权限 → 勾选执行权限
-
-特点：
-- 完全无依赖
-- 适用于任何Linux发行版
-- 文件较大但最可靠
-STATIC_README
+            echo "🎉 静态链接版本" > static-app/README.txt
+            echo "" >> static-app/README.txt
+            echo "此版本为完全静态链接，无需安装任何依赖库！" >> static-app/README.txt
+            echo "" >> static-app/README.txt
+            echo "使用方法：" >> static-app/README.txt
+            echo "1. 双击 machine-code-tool 运行" >> static-app/README.txt
+            echo "2. 如果无法双击，右键 → 属性 → 权限 → 勾选执行权限" >> static-app/README.txt
+            echo "" >> static-app/README.txt
+            echo "特点：" >> static-app/README.txt
+            echo "- 完全无依赖" >> static-app/README.txt
+            echo "- 适用于任何Linux发行版" >> static-app/README.txt
+            echo "- 文件较大但最可靠" >> static-app/README.txt
 
             tar -czf machine-code-tool-static.tar.gz static-app/
             echo "✅ 静态版本打包完成"
@@ -320,22 +308,20 @@ STATIC_README
             ldd semi-static-app/machine-code-tool
             
             # 创建说明文件
-            cat > semi-static-app/README.txt << 'SEMI_README'
-🔧 半静态链接版本
-
-此版本大部分库已静态链接，只依赖少量系统库。
-
-使用方法：
-1. 双击 machine-code-tool 运行
-2. 如果提示缺少依赖，安装基础图形库：
-   sudo yum install -y gtk3
-   或 sudo apt install -y libgtk-3-0
-
-特点：
-- 依赖极少
-- 文件较小
-- 兼容性好
-SEMI_README
+            echo "🔧 半静态链接版本" > semi-static-app/README.txt
+            echo "" >> semi-static-app/README.txt
+            echo "此版本大部分库已静态链接，只依赖少量系统库。" >> semi-static-app/README.txt
+            echo "" >> semi-static-app/README.txt
+            echo "使用方法：" >> semi-static-app/README.txt
+            echo "1. 双击 machine-code-tool 运行" >> semi-static-app/README.txt
+            echo "2. 如果提示缺少依赖，安装基础图形库：" >> semi-static-app/README.txt
+            echo "   sudo yum install -y gtk3" >> semi-static-app/README.txt
+            echo "   或 sudo apt install -y libgtk-3-0" >> semi-static-app/README.txt
+            echo "" >> semi-static-app/README.txt
+            echo "特点：" >> semi-static-app/README.txt
+            echo "- 依赖极少" >> semi-static-app/README.txt
+            echo "- 文件较小" >> semi-static-app/README.txt
+            echo "- 兼容性好" >> semi-static-app/README.txt
 
             tar -czf machine-code-tool-semi-static.tar.gz semi-static-app/
             echo "✅ 半静态版本打包完成"
@@ -423,114 +409,110 @@ SEMI_README
           fi
           
           # 创建智能启动脚本（无依赖版本）
-          cat > portable-app/machine-code-tool-launcher << 'LAUNCHER_EOF'
-#!/bin/bash
-# 机器码获取工具 - 无依赖启动器
-# 此脚本确保程序能找到所有必需的库文件
-
-# 获取脚本所在目录
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-echo "🚀 启动机器码获取工具..."
-echo "📁 程序目录: $DIR"
-
-# 检查主程序
-if [ ! -f "$DIR/machine-code-tool" ]; then
-    echo "❌ 错误: 找不到主程序文件 machine-code-tool"
-    exit 1
-fi
-
-# 检查库目录
-if [ ! -d "$DIR/lib" ]; then
-    echo "❌ 错误: 找不到库文件目录 lib/"
-    exit 1
-fi
-
-echo "📚 库文件数量: $(ls -1 "$DIR/lib" | wc -l)"
-
-# 设置库路径（优先使用我们的库）
-export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"
-
-# 设置其他可能需要的环境变量
-export PKG_CONFIG_PATH="$DIR/lib/pkgconfig:$PKG_CONFIG_PATH"
-export XDG_DATA_DIRS="$DIR/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
-
-# GTK相关环境变量（如果存在相应目录）
-if [ -d "$DIR/lib/gdk-pixbuf-2.0" ]; then
-    export GDK_PIXBUF_MODULE_FILE="$DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
-    export GDK_PIXBUF_MODULEDIR="$DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders"
-fi
-
-# 显示环境信息（调试用）
-echo "🔧 LD_LIBRARY_PATH: ${LD_LIBRARY_PATH:0:100}..."
-
-# 启动程序
-echo "▶️  启动程序..."
-exec "$DIR/machine-code-tool" "$@"
-LAUNCHER_EOF
-
+          echo '#!/bin/bash' > portable-app/machine-code-tool-launcher
+          echo '# 机器码获取工具 - 无依赖启动器' >> portable-app/machine-code-tool-launcher
+          echo '# 此脚本确保程序能找到所有必需的库文件' >> portable-app/machine-code-tool-launcher
+          echo '' >> portable-app/machine-code-tool-launcher
+          echo '# 获取脚本所在目录' >> portable-app/machine-code-tool-launcher
+          echo 'DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' >> portable-app/machine-code-tool-launcher
+          echo '' >> portable-app/machine-code-tool-launcher
+          echo 'echo "🚀 启动机器码获取工具..."' >> portable-app/machine-code-tool-launcher
+          echo 'echo "📁 程序目录: $DIR"' >> portable-app/machine-code-tool-launcher
+          echo '' >> portable-app/machine-code-tool-launcher
+          echo '# 检查主程序' >> portable-app/machine-code-tool-launcher
+          echo 'if [ ! -f "$DIR/machine-code-tool" ]; then' >> portable-app/machine-code-tool-launcher
+          echo '    echo "❌ 错误: 找不到主程序文件 machine-code-tool"' >> portable-app/machine-code-tool-launcher
+          echo '    exit 1' >> portable-app/machine-code-tool-launcher
+          echo 'fi' >> portable-app/machine-code-tool-launcher
+          echo '' >> portable-app/machine-code-tool-launcher
+          echo '# 检查库目录' >> portable-app/machine-code-tool-launcher
+          echo 'if [ ! -d "$DIR/lib" ]; then' >> portable-app/machine-code-tool-launcher
+          echo '    echo "❌ 错误: 找不到库文件目录 lib/"' >> portable-app/machine-code-tool-launcher
+          echo '    exit 1' >> portable-app/machine-code-tool-launcher
+          echo 'fi' >> portable-app/machine-code-tool-launcher
+          echo '' >> portable-app/machine-code-tool-launcher
+          echo 'echo "📚 库文件数量: $(ls -1 "$DIR/lib" | wc -l)"' >> portable-app/machine-code-tool-launcher
+          echo '' >> portable-app/machine-code-tool-launcher
+          echo '# 设置库路径（优先使用我们的库）' >> portable-app/machine-code-tool-launcher
+          echo 'export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"' >> portable-app/machine-code-tool-launcher
+          echo '' >> portable-app/machine-code-tool-launcher
+          echo '# 设置其他可能需要的环境变量' >> portable-app/machine-code-tool-launcher
+          echo 'export PKG_CONFIG_PATH="$DIR/lib/pkgconfig:$PKG_CONFIG_PATH"' >> portable-app/machine-code-tool-launcher
+          echo 'export XDG_DATA_DIRS="$DIR/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"' >> portable-app/machine-code-tool-launcher
+          echo '' >> portable-app/machine-code-tool-launcher
+          echo '# GTK相关环境变量（如果存在相应目录）' >> portable-app/machine-code-tool-launcher
+          echo 'if [ -d "$DIR/lib/gdk-pixbuf-2.0" ]; then' >> portable-app/machine-code-tool-launcher
+          echo '    export GDK_PIXBUF_MODULE_FILE="$DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"' >> portable-app/machine-code-tool-launcher
+          echo '    export GDK_PIXBUF_MODULEDIR="$DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders"' >> portable-app/machine-code-tool-launcher
+          echo 'fi' >> portable-app/machine-code-tool-launcher
+          echo '' >> portable-app/machine-code-tool-launcher
+          echo '# 显示环境信息（调试用）' >> portable-app/machine-code-tool-launcher
+          echo 'echo "🔧 LD_LIBRARY_PATH: ${LD_LIBRARY_PATH:0:100}..."' >> portable-app/machine-code-tool-launcher
+          echo '' >> portable-app/machine-code-tool-launcher
+          echo '# 启动程序' >> portable-app/machine-code-tool-launcher
+          echo 'echo "▶️  启动程序..."' >> portable-app/machine-code-tool-launcher
+          echo 'exec "$DIR/machine-code-tool" "$@"' >> portable-app/machine-code-tool-launcher
+          
           chmod +x portable-app/machine-code-tool-launcher
           
           # 创建智能依赖检查脚本
-          cat > portable-app/check-deps.sh << 'CHECK_EOF'
-#!/bin/bash
-# 依赖检查工具 - 诊断便携包状态
-
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-echo "🔍 机器码获取工具 - 依赖检查"
-echo "================================"
-echo "📁 程序目录: $DIR"
-echo ""
-
-# 检查文件结构
-echo "📋 文件结构检查:"
-if [ -f "$DIR/machine-code-tool" ]; then
-    echo "  ✅ 主程序: machine-code-tool"
-else
-    echo "  ❌ 主程序: machine-code-tool (缺失)"
-fi
-
-if [ -d "$DIR/lib" ]; then
-    lib_count=$(ls -1 "$DIR/lib" | wc -l)
-    echo "  ✅ 库目录: lib/ (包含 $lib_count 个文件)"
-else
-    echo "  ❌ 库目录: lib/ (缺失)"
-fi
-
-echo ""
-
-# 检查依赖状态
-echo "🔗 依赖库检查:"
-export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"
-
-if [ -f "$DIR/machine-code-tool" ]; then
-    missing_deps=$(ldd "$DIR/machine-code-tool" 2>/dev/null | grep "not found" | wc -l)
-    if [ $missing_deps -eq 0 ]; then
-        echo "  ✅ 所有依赖库都已满足"
-    else
-        echo "  ❌ 发现 $missing_deps 个缺失的依赖:"
-        ldd "$DIR/machine-code-tool" 2>/dev/null | grep "not found"
-        echo ""
-        echo "💡 解决方案:"
-        echo "  1. 检查系统是否安装了基础图形库"
-        echo "  2. 尝试安装: sudo yum install -y gtk3 webkit2gtk3"
-        echo "  3. 或者: sudo apt install -y libgtk-3-0 libwebkit2gtk-4.1-0"
-    fi
-else
-    echo "  ❌ 无法检查依赖 (主程序不存在)"
-fi
-
-echo ""
-echo "📊 便携包信息:"
-echo "  - 库文件数量: $(ls -1 "$DIR/lib" 2>/dev/null | wc -l)"
-echo "  - 总大小: $(du -sh "$DIR" 2>/dev/null | cut -f1)"
-
-echo ""
-echo "🚀 启动测试:"
-echo "  运行命令: ./machine-code-tool-launcher"
-CHECK_EOF
-
+          echo '#!/bin/bash' > portable-app/check-deps.sh
+          echo '# 依赖检查工具 - 诊断便携包状态' >> portable-app/check-deps.sh
+          echo '' >> portable-app/check-deps.sh
+          echo 'DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' >> portable-app/check-deps.sh
+          echo '' >> portable-app/check-deps.sh
+          echo 'echo "🔍 机器码获取工具 - 依赖检查"' >> portable-app/check-deps.sh
+          echo 'echo "================================"' >> portable-app/check-deps.sh
+          echo 'echo "📁 程序目录: $DIR"' >> portable-app/check-deps.sh
+          echo 'echo ""' >> portable-app/check-deps.sh
+          echo '' >> portable-app/check-deps.sh
+          echo '# 检查文件结构' >> portable-app/check-deps.sh
+          echo 'echo "📋 文件结构检查:"' >> portable-app/check-deps.sh
+          echo 'if [ -f "$DIR/machine-code-tool" ]; then' >> portable-app/check-deps.sh
+          echo '    echo "  ✅ 主程序: machine-code-tool"' >> portable-app/check-deps.sh
+          echo 'else' >> portable-app/check-deps.sh
+          echo '    echo "  ❌ 主程序: machine-code-tool (缺失)"' >> portable-app/check-deps.sh
+          echo 'fi' >> portable-app/check-deps.sh
+          echo '' >> portable-app/check-deps.sh
+          echo 'if [ -d "$DIR/lib" ]; then' >> portable-app/check-deps.sh
+          echo '    lib_count=$(ls -1 "$DIR/lib" | wc -l)' >> portable-app/check-deps.sh
+          echo '    echo "  ✅ 库目录: lib/ (包含 $lib_count 个文件)"' >> portable-app/check-deps.sh
+          echo 'else' >> portable-app/check-deps.sh
+          echo '    echo "  ❌ 库目录: lib/ (缺失)"' >> portable-app/check-deps.sh
+          echo 'fi' >> portable-app/check-deps.sh
+          echo '' >> portable-app/check-deps.sh
+          echo 'echo ""' >> portable-app/check-deps.sh
+          echo '' >> portable-app/check-deps.sh
+          echo '# 检查依赖状态' >> portable-app/check-deps.sh
+          echo 'echo "🔗 依赖库检查:"' >> portable-app/check-deps.sh
+          echo 'export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"' >> portable-app/check-deps.sh
+          echo '' >> portable-app/check-deps.sh
+          echo 'if [ -f "$DIR/machine-code-tool" ]; then' >> portable-app/check-deps.sh
+          echo '    missing_deps=$(ldd "$DIR/machine-code-tool" 2>/dev/null | grep "not found" | wc -l)' >> portable-app/check-deps.sh
+          echo '    if [ $missing_deps -eq 0 ]; then' >> portable-app/check-deps.sh
+          echo '        echo "  ✅ 所有依赖库都已满足"' >> portable-app/check-deps.sh
+          echo '    else' >> portable-app/check-deps.sh
+          echo '        echo "  ❌ 发现 $missing_deps 个缺失的依赖:"' >> portable-app/check-deps.sh
+          echo '        ldd "$DIR/machine-code-tool" 2>/dev/null | grep "not found"' >> portable-app/check-deps.sh
+          echo '        echo ""' >> portable-app/check-deps.sh
+          echo '        echo "💡 解决方案:"' >> portable-app/check-deps.sh
+          echo '        echo "  1. 检查系统是否安装了基础图形库"' >> portable-app/check-deps.sh
+          echo '        echo "  2. 尝试安装: sudo yum install -y gtk3 webkit2gtk3"' >> portable-app/check-deps.sh
+          echo '        echo "  3. 或者: sudo apt install -y libgtk-3-0 libwebkit2gtk-4.1-0"' >> portable-app/check-deps.sh
+          echo '    fi' >> portable-app/check-deps.sh
+          echo 'else' >> portable-app/check-deps.sh
+          echo '    echo "  ❌ 无法检查依赖 (主程序不存在)"' >> portable-app/check-deps.sh
+          echo 'fi' >> portable-app/check-deps.sh
+          echo '' >> portable-app/check-deps.sh
+          echo 'echo ""' >> portable-app/check-deps.sh
+          echo 'echo "📊 便携包信息:"' >> portable-app/check-deps.sh
+          echo 'echo "  - 库文件数量: $(ls -1 "$DIR/lib" 2>/dev/null | wc -l)"' >> portable-app/check-deps.sh
+          echo 'echo "  - 总大小: $(du -sh "$DIR" 2>/dev/null | cut -f1)"' >> portable-app/check-deps.sh
+          echo '' >> portable-app/check-deps.sh
+          echo 'echo ""' >> portable-app/check-deps.sh
+          echo 'echo "🚀 启动测试:"' >> portable-app/check-deps.sh
+          echo 'echo "  运行命令: ./machine-code-tool-launcher"' >> portable-app/check-deps.sh
+          
           chmod +x portable-app/check-deps.sh
           
           # 显示便携包内容
