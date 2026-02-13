@@ -63,17 +63,38 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
+        
+        echo "🔧 安装静态链接构建所需的完整工具链..."
+        
         # 安装基本构建工具
         sudo apt-get install -y build-essential curl wget pkg-config
+        
+        # 安装musl工具链（用于完全静态链接）
+        sudo apt-get install -y musl-tools musl-dev gcc-multilib
+        
         # 安装开发库（包括静态库）
         sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
         sudo apt-get install -y libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
-        # 尝试安装静态库版本
-        sudo apt-get install -y libgtk-3-dev:amd64 libglib2.0-dev:amd64 2>/dev/null || true
-        # 安装musl工具链用于静态编译
-        sudo apt-get install -y musl-tools musl-dev
+        
+        # 尝试安装静态版本的库
+        sudo apt-get install -y \
+          libgtk-3-dev \
+          libglib2.0-dev \
+          libcairo2-dev \
+          libpango1.0-dev \
+          libgdk-pixbuf2.0-dev \
+          libatk1.0-dev \
+          libssl-dev \
+          2>/dev/null || echo "部分静态库安装失败，继续..."
+        
         # 检查可用的静态库
-        find /usr/lib -name "*.a" | grep -E "(gtk|glib|webkit)" | head -10 || echo "未找到静态库"
+        echo "📋 检查可用的静态库："
+        find /usr/lib -name "*.a" | grep -E "(gtk|glib|webkit|ssl)" | head -20 || echo "未找到相关静态库"
+        
+        # 检查musl工具
+        echo "🔍 检查musl工具："
+        which musl-gcc || echo "musl-gcc未找到"
+        musl-gcc --version 2>/dev/null || echo "musl-gcc版本检查失败"
 
     - name: 缓存Tauri CLI
       uses: actions/cache@v4
@@ -109,37 +130,70 @@ jobs:
         echo "使用Rust原生TLS，无需OpenSSL依赖"
         
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          echo "Linux构建：尝试静态链接构建"
+          echo "🎯 Linux构建：专注于静态链接构建（无需用户安装依赖）"
           
-          # 设置静态链接环境变量
+          # 方法1: 尝试musl静态链接（最彻底的静态链接）
+          echo "🔧 方法1: 尝试musl完全静态链接..."
           export PKG_CONFIG_ALL_STATIC=1
           export RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-static"
           
-          # 尝试静态构建
-          echo "尝试完全静态链接..."
-          if cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose 2>&1; then
-            echo "✅ 静态链接构建成功"
+          if cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose; then
+            echo "✅ musl静态链接构建成功（完全无依赖）"
             STATIC_BUILD=true
           else
-            echo "❌ 静态链接失败，尝试部分静态链接..."
+            echo "❌ musl静态链接失败，尝试glibc静态链接..."
+            
             # 清除之前的构建
             cargo clean
             
-            # 尝试部分静态链接
+            # 方法2: 尝试glibc静态链接
+            echo "🔧 方法2: 尝试glibc静态链接..."
             export RUSTFLAGS="-C target-feature=+crt-static"
             unset PKG_CONFIG_ALL_STATIC
             
-            if cargo tauri build --target x86_64-unknown-linux-gnu --no-bundle --verbose 2>&1; then
-              echo "✅ 部分静态链接成功"
+            if cargo tauri build --target x86_64-unknown-linux-gnu --no-bundle --verbose; then
+              echo "✅ glibc静态链接构建成功（部分静态）"
               STATIC_BUILD=partial
-              # 更新target为gnu版本
-              matrix_target="x86_64-unknown-linux-gnu"
             else
-              echo "❌ 静态链接完全失败，使用动态链接..."
-              unset RUSTFLAGS
-              cargo tauri build --target x86_64-unknown-linux-gnu --no-bundle --verbose
-              STATIC_BUILD=false
-              matrix_target="x86_64-unknown-linux-gnu"
+              echo "❌ glibc静态链接也失败，尝试优化的musl构建..."
+              
+              # 清除之前的构建
+              cargo clean
+              
+              # 方法3: 优化的musl静态构建
+              echo "🔧 方法3: 优化musl环境和依赖..."
+              
+              # 安装更多musl相关工具
+              sudo apt-get install -y musl-tools musl-dev gcc-multilib
+              
+              # 设置musl交叉编译环境
+              export CC_x86_64_unknown_linux_musl=musl-gcc
+              export CXX_x86_64_unknown_linux_musl=musl-g++
+              export AR_x86_64_unknown_linux_musl=ar
+              export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc
+              
+              # 尝试禁用某些可能有问题的特性
+              export PKG_CONFIG_ALL_STATIC=1
+              export RUSTFLAGS="-C target-feature=+crt-static"
+              
+              if cargo tauri build --target x86_64-unknown-linux-musl --no-bundle --verbose; then
+                echo "✅ 优化musl静态构建成功（完全无依赖）"
+                STATIC_BUILD=true
+              else
+                echo "❌ 所有静态链接尝试都失败了"
+                echo "🔄 回退到动态链接 + 便携包方案..."
+                
+                # 最后的回退方案：动态链接 + 便携包
+                unset RUSTFLAGS PKG_CONFIG_ALL_STATIC CC_x86_64_unknown_linux_musl CXX_x86_64_unknown_linux_musl AR_x86_64_unknown_linux_musl CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER
+                
+                if cargo tauri build --target x86_64-unknown-linux-gnu --no-bundle --verbose; then
+                  echo "⚠️ 使用动态链接构建（将创建便携包包含依赖）"
+                  STATIC_BUILD=false
+                else
+                  echo "❌ 连动态链接都失败了，构建彻底失败"
+                  exit 1
+                fi
+              fi
             fi
           fi
           
@@ -148,21 +202,17 @@ jobs:
           echo "查找构建产物位置..."
           find . -name "machine-code-tool" -type f 2>/dev/null || true
           
-          # 确定正确的构建目录（支持多种target）
-          if [ -f "src-tauri/target/${{ matrix.target }}/release/machine-code-tool" ]; then
-            BUILD_DIR="src-tauri/target/${{ matrix.target }}/release"
-            ACTUAL_TARGET="${{ matrix.target }}"
-          elif [ -f "src-tauri/target/x86_64-unknown-linux-gnu/release/machine-code-tool" ]; then
-            BUILD_DIR="src-tauri/target/x86_64-unknown-linux-gnu/release"
-            ACTUAL_TARGET="x86_64-unknown-linux-gnu"
-          elif [ -f "target/${{ matrix.target }}/release/machine-code-tool" ]; then
+          # 确定正确的构建目录（我们在src-tauri目录下）
+          if [ -f "target/${{ matrix.target }}/release/machine-code-tool" ]; then
             BUILD_DIR="target/${{ matrix.target }}/release"
             ACTUAL_TARGET="${{ matrix.target }}"
           elif [ -f "target/x86_64-unknown-linux-gnu/release/machine-code-tool" ]; then
             BUILD_DIR="target/x86_64-unknown-linux-gnu/release"
             ACTUAL_TARGET="x86_64-unknown-linux-gnu"
           else
-            echo "❌ 找不到构建产物"
+            echo "❌ 找不到构建产物，列出target目录内容："
+            ls -la target/ 2>/dev/null || echo "target目录不存在"
+            find target -name "machine-code-tool" -type f 2>/dev/null || echo "未找到machine-code-tool文件"
             exit 1
           fi
           
@@ -295,9 +345,20 @@ jobs:
 
     - name: 查找构建文件
       run: |
-        echo "查找构建产物..."
-        find src-tauri/target -name "machine-code-tool*" -type f || true
-        ls -la src-tauri/target/${{ matrix.target }}/release/ || true
+        echo "查找Linux构建产物..."
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          echo "在src-tauri目录中查找..."
+          find src-tauri/target -name "machine-code-tool*" -type f 2>/dev/null || echo "未在src-tauri/target找到文件"
+          echo "检查可能的目录结构..."
+          ls -la src-tauri/target/ 2>/dev/null || echo "src-tauri/target目录不存在"
+          ls -la src-tauri/target/${{ matrix.target }}/ 2>/dev/null || echo "${{ matrix.target }}目录不存在"
+          ls -la src-tauri/target/${{ matrix.target }}/release/ 2>/dev/null || echo "release目录不存在"
+          ls -la src-tauri/target/x86_64-unknown-linux-gnu/release/ 2>/dev/null || echo "gnu release目录不存在"
+        else
+          echo "查找其他平台构建产物..."
+          find src-tauri/target -name "machine-code-tool*" -type f || true
+          ls -la src-tauri/target/${{ matrix.target }}/release/ || true
+        fi
       shell: bash
 
     - name: 复制并重命名构建产物
@@ -381,7 +442,13 @@ jobs:
             echo "🐧 机器码获取工具 - 银河麒麟版（静态版本）" > upload/使用说明.txt
             echo "=======================================" >> upload/使用说明.txt
             echo "" >> upload/使用说明.txt
-            echo "🎉 此版本为静态链接版本，无需安装任何依赖！" >> upload/使用说明.txt
+            echo "🎉 此版本为静态链接版本，真正做到开箱即用！" >> upload/使用说明.txt
+            echo "" >> upload/使用说明.txt
+            echo "✨ 版本特点:" >> upload/使用说明.txt
+            echo "• 无需安装任何系统依赖库" >> upload/使用说明.txt
+            echo "• 无需root权限安装软件包" >> upload/使用说明.txt
+            echo "• 适用于任何Linux发行版（包括银河麒麟）" >> upload/使用说明.txt
+            echo "• 下载解压即可使用" >> upload/使用说明.txt
             echo "" >> upload/使用说明.txt
             echo "✅ 使用方法:" >> upload/使用说明.txt
             echo "1. 解压文件: 右键点击 .tar.gz 文件 → 解压" >> upload/使用说明.txt
