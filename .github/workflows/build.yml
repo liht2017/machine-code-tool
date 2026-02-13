@@ -133,8 +133,22 @@ jobs:
           echo 'export CC=musl-gcc' >> alpine-static-build.sh
           echo 'export CXX=musl-g++' >> alpine-static-build.sh
           echo '' >> alpine-static-build.sh
-          echo '# 进入源码目录' >> alpine-static-build.sh
-          echo 'cd /workspace/src-tauri' >> alpine-static-build.sh
+          echo '# 检查并进入源码目录' >> alpine-static-build.sh
+          echo 'echo "当前目录: $(pwd)"' >> alpine-static-build.sh
+          echo 'echo "工作空间内容:"' >> alpine-static-build.sh
+          echo 'ls -la /workspace/' >> alpine-static-build.sh
+          echo 'if [ -d "/workspace/src-tauri" ]; then' >> alpine-static-build.sh
+          echo '    cd /workspace/src-tauri' >> alpine-static-build.sh
+          echo 'elif [ -d "/workspace" ]; then' >> alpine-static-build.sh
+          echo '    cd /workspace' >> alpine-static-build.sh
+          echo '    if [ -f "src-tauri/Cargo.toml" ]; then' >> alpine-static-build.sh
+          echo '        cd src-tauri' >> alpine-static-build.sh
+          echo '    fi' >> alpine-static-build.sh
+          echo 'else' >> alpine-static-build.sh
+          echo '    echo "错误: 找不到源码目录"' >> alpine-static-build.sh
+          echo '    exit 1' >> alpine-static-build.sh
+          echo 'fi' >> alpine-static-build.sh
+          echo 'echo "最终工作目录: $(pwd)"' >> alpine-static-build.sh
           echo '' >> alpine-static-build.sh
           echo 'echo "🚀 开始完全静态构建..."' >> alpine-static-build.sh
           echo 'cargo tauri build --target x86_64-unknown-linux-musl --no-bundle --verbose' >> alpine-static-build.sh
