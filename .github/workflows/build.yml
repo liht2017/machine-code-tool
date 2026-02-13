@@ -90,12 +90,14 @@ jobs:
           echo '# 更新包管理器' >> alpine-static-build.sh
           echo 'apk update' >> alpine-static-build.sh
           echo '' >> alpine-static-build.sh
-          echo '# 安装基础构建工具和静态库' >> alpine-static-build.sh
+          echo '# 安装基础构建工具和库' >> alpine-static-build.sh
           echo 'apk add --no-cache \' >> alpine-static-build.sh
           echo '    curl \' >> alpine-static-build.sh
           echo '    gcc \' >> alpine-static-build.sh
           echo '    g++ \' >> alpine-static-build.sh
           echo '    musl-dev \' >> alpine-static-build.sh
+          echo '    gcompat \' >> alpine-static-build.sh
+          echo '    libc6-compat \' >> alpine-static-build.sh
           echo '    pkgconfig \' >> alpine-static-build.sh
           echo '    make \' >> alpine-static-build.sh
           echo '    perl \' >> alpine-static-build.sh
@@ -123,10 +125,16 @@ jobs:
           echo 'curl --proto="=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable' >> alpine-static-build.sh
           echo 'source ~/.cargo/env' >> alpine-static-build.sh
           echo '' >> alpine-static-build.sh
-          echo '# 添加musl目标' >> alpine-static-build.sh
+          echo '# 添加目标架构' >> alpine-static-build.sh
           echo 'rustup target add x86_64-unknown-linux-musl' >> alpine-static-build.sh
+          echo 'rustup target add x86_64-unknown-linux-gnu' >> alpine-static-build.sh
           echo '' >> alpine-static-build.sh
-          echo 'echo "🔧 配置完全静态链接环境..."' >> alpine-static-build.sh
+          echo 'echo "🔧 先用glibc目标安装Tauri CLI..."' >> alpine-static-build.sh
+          echo '# 临时使用glibc目标安装CLI，避免proc-macro问题' >> alpine-static-build.sh
+          echo 'export RUSTFLAGS=""' >> alpine-static-build.sh
+          echo 'cargo install tauri-cli --locked --target x86_64-unknown-linux-gnu || echo "CLI安装失败，尝试其他方式"' >> alpine-static-build.sh
+          echo '' >> alpine-static-build.sh
+          echo 'echo "🔧 配置静态链接环境用于最终构建..."' >> alpine-static-build.sh
           echo 'export PKG_CONFIG_ALL_STATIC=1' >> alpine-static-build.sh
           echo 'export PKG_CONFIG_ALL_LIBS=1' >> alpine-static-build.sh
           echo 'export RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-static"' >> alpine-static-build.sh
