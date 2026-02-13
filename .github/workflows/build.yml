@@ -28,7 +28,7 @@ jobs:
             artifact_name: machine-code-tool
             asset_name: machine-code-tool-macos
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
+            target: x86_64-unknown-linux-gnu
             artifact_name: machine-code-tool
             asset_name: machine-code-tool-kylin
 
@@ -43,9 +43,6 @@ jobs:
         toolchain: stable
         targets: ${{ matrix.target }}
     
-    - name: 添加备选目标
-      if: matrix.target == 'x86_64-unknown-linux-musl'
-      run: rustup target add x86_64-unknown-linux-gnu
 
     - name: 缓存Cargo
       uses: actions/cache@v4
@@ -135,11 +132,22 @@ jobs:
           # 直接使用标准动态链接，然后创建超级便携包
           echo "🔧 使用标准构建 + 智能便携包（对用户等同于静态链接）"
           
-          if cargo tauri build --target x86_64-unknown-linux-gnu --no-bundle --verbose; then
+          echo "🔧 开始Linux构建..."
+          echo "目标架构: ${{ matrix.target }}"
+          if cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose; then
             echo "✅ 标准构建成功，开始创建便携包..."
             STATIC_BUILD=portable
           else
-            echo "❌ 标准构建失败"
+            echo "❌ 标准构建失败，显示详细信息..."
+            echo "=== Cargo构建状态 ==="
+            cargo --version
+            rustc --version
+            echo "=== 目标架构检查 ==="
+            rustup target list --installed
+            echo "=== 构建目录内容 ==="
+            ls -la target/ 2>/dev/null || echo "target目录不存在"
+            echo "=== 最近的构建日志 ==="
+            find target -name "*.log" -type f -exec tail -20 {} \; 2>/dev/null || echo "未找到构建日志"
             exit 1
           fi
           
@@ -152,9 +160,9 @@ jobs:
           if [ -f "target/${{ matrix.target }}/release/machine-code-tool" ]; then
             BUILD_DIR="target/${{ matrix.target }}/release"
             ACTUAL_TARGET="${{ matrix.target }}"
-          elif [ -f "target/x86_64-unknown-linux-gnu/release/machine-code-tool" ]; then
-            BUILD_DIR="target/x86_64-unknown-linux-gnu/release"
-            ACTUAL_TARGET="x86_64-unknown-linux-gnu"
+          elif [ -f "target/${{ matrix.target }}/release/machine-code-tool" ]; then
+            BUILD_DIR="target/${{ matrix.target }}/release"
+            ACTUAL_TARGET="${{ matrix.target }}"
           else
             echo "❌ 找不到构建产物，列出target目录内容："
             ls -la target/ 2>/dev/null || echo "target目录不存在"
@@ -218,38 +226,46 @@ jobs:
           done < /tmp/direct_deps.txt
           
           echo "🔄 第二轮：递归收集间接依赖..."
-          # 多轮递归，确保收集完整
-          for round in {1..4}; do
+          # 简化的递归收集，避免复杂的循环逻辑
+          for round in {1..3}; do
             echo "  🔄 递归轮次 $round..."
-            new_libs_found=0
+            
+            # 收集当前轮次的新依赖到临时文件
+            > /tmp/round_deps.txt
             
             for lib_file in portable-app/lib/*.so*; do
               if [ -f "$lib_file" ]; then
-                ldd "$lib_file" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read sublib; do
-                  if [ -f "$sublib" ] && [ ! -z "$sublib" ]; then
-                    sublibname=$(basename "$sublib")
-                    if ! grep -q "^$sublibname$" /tmp/copied_libs.txt; then
-                      # 同样的核心系统库过滤
-                      if [[ "$sublib" != "/lib/x86_64-linux-gnu/libc.so"* && \
-                            "$sublib" != "/lib/x86_64-linux-gnu/libdl.so"* && \
-                            "$sublib" != "/lib/x86_64-linux-gnu/libpthread.so"* && \
-                            "$sublib" != "/lib/x86_64-linux-gnu/libm.so"* && \
-                            "$sublib" != "/lib/x86_64-linux-gnu/librt.so"* && \
-                            "$sublib" != "/lib64/ld-linux-x86-64.so"* ]]; then
-                        echo "    📦 $sublib"
-                        if cp "$sublib" portable-app/lib/ 2>/dev/null; then
-                          echo "$sublibname" >> /tmp/copied_libs.txt
-                          new_libs_found=1
-                        fi
-                      fi
-                    fi
-                  fi
-                done
+                ldd "$lib_file" 2>/dev/null | grep "=> /" | awk '{print $3}' >> /tmp/round_deps.txt
               fi
             done
             
+            # 处理这轮收集的依赖
+            round_count=0
+            while read sublib; do
+              if [ -f "$sublib" ] && [ ! -z "$sublib" ]; then
+                sublibname=$(basename "$sublib")
+                if ! grep -q "^$sublibname$" /tmp/copied_libs.txt; then
+                  # 核心系统库过滤
+                  if [[ "$sublib" != "/lib/x86_64-linux-gnu/libc.so"* && \
+                        "$sublib" != "/lib/x86_64-linux-gnu/libdl.so"* && \
+                        "$sublib" != "/lib/x86_64-linux-gnu/libpthread.so"* && \
+                        "$sublib" != "/lib/x86_64-linux-gnu/libm.so"* && \
+                        "$sublib" != "/lib/x86_64-linux-gnu/librt.so"* && \
+                        "$sublib" != "/lib64/ld-linux-x86-64.so"* ]]; then
+                    echo "    📦 $sublib"
+                    if cp "$sublib" portable-app/lib/ 2>/dev/null; then
+                      echo "$sublibname" >> /tmp/copied_libs.txt
+                      round_count=$((round_count + 1))
+                    fi
+                  fi
+                fi
+              fi
+            done < /tmp/round_deps.txt
+            
+            echo "  📊 本轮收集了 $round_count 个新库"
+            
             # 如果这轮没有找到新库，提前结束
-            if [ $new_libs_found -eq 0 ]; then
+            if [ $round_count -eq 0 ]; then
               echo "  ✅ 递归完成，没有更多依赖"
               break
             fi
@@ -425,8 +441,8 @@ jobs:
           ls -la src-tauri/target/ 2>/dev/null || echo "src-tauri/target目录不存在"
           ls -la src-tauri/target/${{ matrix.target }}/ 2>/dev/null || echo "${{ matrix.target }}目录不存在"
           ls -la src-tauri/target/${{ matrix.target }}/release/ 2>/dev/null || echo "release目录不存在"
-          # Linux特定：检查gnu目录
-          ls -la src-tauri/target/x86_64-unknown-linux-gnu/release/ 2>/dev/null || echo "gnu release目录不存在"
+          # Linux特定：检查目标目录
+          ls -la src-tauri/target/${{ matrix.target }}/release/ 2>/dev/null || echo "${{ matrix.target }} release目录不存在"
         else
           echo "查找其他平台构建产物..."
           find src-tauri/target -name "machine-code-tool*" -type f || true
