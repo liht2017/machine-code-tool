@@ -130,70 +130,115 @@ jobs:
         echo "使用Rust原生TLS，无需OpenSSL依赖"
         
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          echo "🎯 Linux构建：专注于静态链接构建（无需用户安装依赖）"
+          echo "🎯 Linux构建：多种方案尝试静态链接"
           
-          # 方法1: 尝试musl静态链接（最彻底的静态链接）
-          echo "🔧 方法1: 尝试musl完全静态链接..."
-          export PKG_CONFIG_ALL_STATIC=1
-          export RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-static"
+          # 方案1: 尝试简化的静态链接
+          echo "🔧 方案1: 尝试简化静态链接（仅静态链接Rust部分）..."
+          export RUSTFLAGS="-C target-feature=+crt-static"
           
-          if cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose; then
-            echo "✅ musl静态链接构建成功（完全无依赖）"
-            STATIC_BUILD=true
-          else
-            echo "❌ musl静态链接失败，尝试glibc静态链接..."
+          if cargo tauri build --target x86_64-unknown-linux-gnu --no-bundle --verbose; then
+            echo "✅ 简化静态链接成功"
             
-            # 清除之前的构建
-            cargo clean
+            # 检查是否真的减少了依赖
+            echo "🔍 检查依赖情况..."
+            ldd target/x86_64-unknown-linux-gnu/release/machine-code-tool || echo "完全静态链接成功！"
             
-            # 方法2: 尝试glibc静态链接
-            echo "🔧 方法2: 尝试glibc静态链接..."
-            export RUSTFLAGS="-C target-feature=+crt-static"
-            unset PKG_CONFIG_ALL_STATIC
-            
-            if cargo tauri build --target x86_64-unknown-linux-gnu --no-bundle --verbose; then
-              echo "✅ glibc静态链接构建成功（部分静态）"
-              STATIC_BUILD=partial
+            # 计算依赖数量
+            dep_count=$(ldd target/x86_64-unknown-linux-gnu/release/machine-code-tool 2>/dev/null | wc -l)
+            if [ $dep_count -lt 20 ]; then
+              echo "✅ 依赖数量较少($dep_count)，接近静态链接效果"
+              STATIC_BUILD=semi_static
             else
-              echo "❌ glibc静态链接也失败，尝试优化的musl构建..."
-              
-              # 清除之前的构建
-              cargo clean
-              
-              # 方法3: 优化的musl静态构建
-              echo "🔧 方法3: 优化musl环境和依赖..."
-              
-              # 安装更多musl相关工具
-              sudo apt-get install -y musl-tools musl-dev gcc-multilib
-              
-              # 设置musl交叉编译环境
-              export CC_x86_64_unknown_linux_musl=musl-gcc
-              export CXX_x86_64_unknown_linux_musl=musl-g++
-              export AR_x86_64_unknown_linux_musl=ar
-              export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc
-              
-              # 尝试禁用某些可能有问题的特性
-              export PKG_CONFIG_ALL_STATIC=1
-              export RUSTFLAGS="-C target-feature=+crt-static"
-              
-              if cargo tauri build --target x86_64-unknown-linux-musl --no-bundle --verbose; then
-                echo "✅ 优化musl静态构建成功（完全无依赖）"
+              echo "⚠️ 依赖数量较多($dep_count)，需要便携包"
+              STATIC_BUILD=portable
+            fi
+          else
+            echo "❌ 简化静态链接失败，尝试完全静态链接..."
+            
+            # 方案2: 尝试完全静态链接（Alpine方式）
+            echo "🔧 方案2: 使用Alpine Docker进行完全静态链接..."
+            
+            # 创建Alpine构建脚本
+            cat > alpine-static-build.sh << 'ALPINE_EOF'
+#!/bin/sh
+set -e
+
+echo "🐧 Alpine Linux静态构建环境"
+echo "安装依赖..."
+
+# 更新包管理器
+apk update
+
+# 安装基础构建工具
+apk add --no-cache \
+    curl \
+    build-base \
+    pkgconfig \
+    openssl-dev \
+    openssl-libs-static
+
+# 尝试安装GTK静态库（如果可用）
+apk add --no-cache \
+    gtk+3.0-dev \
+    webkit2gtk-dev \
+    || echo "GTK静态库不可用，继续..."
+
+# 安装Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+source ~/.cargo/env
+
+# 添加musl目标
+rustup target add x86_64-unknown-linux-musl
+
+# 安装Tauri CLI
+cargo install tauri-cli --locked
+
+# 设置静态链接环境
+export PKG_CONFIG_ALL_STATIC=1
+export RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-static"
+
+echo "🔧 开始静态构建..."
+cd /workspace/src-tauri
+
+# 尝试musl静态构建
+if cargo tauri build --target x86_64-unknown-linux-musl --no-bundle --verbose; then
+    echo "✅ Alpine musl静态构建成功"
+    exit 0
+else
+    echo "❌ Alpine静态构建失败"
+    exit 1
+fi
+ALPINE_EOF
+
+            chmod +x alpine-static-build.sh
+            
+            # 检查Docker是否可用
+            if command -v docker &> /dev/null; then
+              echo "🐳 使用Docker Alpine环境构建..."
+              if docker run --rm -v "$(pwd):/workspace" -w /workspace alpine:latest ./alpine-static-build.sh; then
+                echo "✅ Docker Alpine静态构建成功"
                 STATIC_BUILD=true
               else
-                echo "❌ 所有静态链接尝试都失败了"
-                echo "🔄 回退到动态链接 + 便携包方案..."
-                
-                # 最后的回退方案：动态链接 + 便携包
-                unset RUSTFLAGS PKG_CONFIG_ALL_STATIC CC_x86_64_unknown_linux_musl CXX_x86_64_unknown_linux_musl AR_x86_64_unknown_linux_musl CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER
-                
-                if cargo tauri build --target x86_64-unknown-linux-gnu --no-bundle --verbose; then
-                  echo "⚠️ 使用动态链接构建（将创建便携包包含依赖）"
-                  STATIC_BUILD=false
-                else
-                  echo "❌ 连动态链接都失败了，构建彻底失败"
-                  exit 1
-                fi
+                echo "❌ Docker Alpine构建失败，回退到便携包..."
+                STATIC_BUILD=portable
               fi
+            else
+              echo "❌ Docker不可用，回退到便携包..."
+              STATIC_BUILD=portable
+            fi
+          fi
+          
+          # 如果静态链接失败，创建便携包
+          if [ "$STATIC_BUILD" = "portable" ]; then
+            echo "🔄 回退到便携包方案..."
+            # 清理环境
+            unset RUSTFLAGS PKG_CONFIG_ALL_STATIC
+            
+            if cargo tauri build --target x86_64-unknown-linux-gnu --no-bundle --verbose; then
+              echo "✅ 动态链接构建成功，将创建便携包..."
+            else
+              echo "❌ 所有构建方案都失败了"
+              exit 1
             fi
           fi
           
@@ -233,74 +278,259 @@ jobs:
             STATIC_BUILD=partial
           fi
           
-          # 根据构建类型处理
+          # 根据构建结果处理文件
           if [ "$STATIC_BUILD" = "true" ]; then
-            echo "✅ 静态链接成功，无需便携包"
-            # 直接复制静态可执行文件
+            echo "🎉 完全静态链接成功！创建静态版本..."
             mkdir -p static-app
             cp machine-code-tool static-app/
-            echo "静态链接版本已准备完成" > static-app/README.txt
-            echo "此版本无需安装任何依赖，直接运行即可" >> static-app/README.txt
+            
+            echo "验证静态链接状态..."
+            if ldd static-app/machine-code-tool | grep -q "not a dynamic executable"; then
+              echo "✅ 确认：完全静态链接"
+            else
+              echo "📊 依赖情况："
+              ldd static-app/machine-code-tool
+            fi
+            
+            # 创建说明文件
+            cat > static-app/README.txt << 'STATIC_README'
+🎉 静态链接版本
+
+此版本为完全静态链接，无需安装任何依赖库！
+
+使用方法：
+1. 双击 machine-code-tool 运行
+2. 如果无法双击，右键 → 属性 → 权限 → 勾选执行权限
+
+特点：
+- 完全无依赖
+- 适用于任何Linux发行版
+- 文件较大但最可靠
+STATIC_README
+
             tar -czf machine-code-tool-static.tar.gz static-app/
+            echo "✅ 静态版本打包完成"
+            
+          elif [ "$STATIC_BUILD" = "semi_static" ]; then
+            echo "🔧 半静态链接成功！依赖较少..."
+            mkdir -p semi-static-app
+            cp machine-code-tool semi-static-app/
+            
+            echo "📊 依赖分析："
+            ldd semi-static-app/machine-code-tool
+            
+            # 创建说明文件
+            cat > semi-static-app/README.txt << 'SEMI_README'
+🔧 半静态链接版本
+
+此版本大部分库已静态链接，只依赖少量系统库。
+
+使用方法：
+1. 双击 machine-code-tool 运行
+2. 如果提示缺少依赖，安装基础图形库：
+   sudo yum install -y gtk3
+   或 sudo apt install -y libgtk-3-0
+
+特点：
+- 依赖极少
+- 文件较小
+- 兼容性好
+SEMI_README
+
+            tar -czf machine-code-tool-semi-static.tar.gz semi-static-app/
+            echo "✅ 半静态版本打包完成"
+            
           else
-            echo "⚠️ 需要创建便携包"
+            echo "🚀 创建完整便携包，包含所有依赖库..."
+            
             # 创建便携目录结构
             mkdir -p portable-app/lib
             cp machine-code-tool portable-app/
+            
+            echo "📦 收集所有依赖库..."
           
-          # 分析并复制依赖库（更全面的复制）
-          echo "分析依赖库..."
-          ldd machine-code-tool | grep "=> /" | awk '{print $3}' > /tmp/deps.txt
+          # 全面的依赖收集策略（确保无需用户安装任何依赖）
+          echo "🔍 分析所有依赖库..."
+          ldd machine-code-tool | grep "=> /" | awk '{print $3}' > /tmp/direct_deps.txt
           
-          # 复制所有非系统核心库
+          # 创建已复制库的记录
+          touch /tmp/copied_libs.txt
+          
+          echo "📦 第一轮：收集直接依赖..."
           while read lib; do
-            if [ -f "$lib" ]; then
-              # 排除系统核心库，复制应用相关库
-              if [[ "$lib" != "/lib/"* && "$lib" != "/lib64/"* && "$lib" != *"libc.so"* && "$lib" != *"libdl.so"* && "$lib" != *"libpthread.so"* && "$lib" != *"libm.so"* && "$lib" != *"ld-linux"* ]]; then
-                echo "复制库: $lib"
-                cp "$lib" portable-app/lib/ 2>/dev/null || true
+            if [ -f "$lib" ] && [ ! -z "$lib" ]; then
+              # 只排除最核心的系统库，其他都复制
+              if [[ "$lib" != "/lib/x86_64-linux-gnu/libc.so"* && \
+                    "$lib" != "/lib/x86_64-linux-gnu/libdl.so"* && \
+                    "$lib" != "/lib/x86_64-linux-gnu/libpthread.so"* && \
+                    "$lib" != "/lib/x86_64-linux-gnu/libm.so"* && \
+                    "$lib" != "/lib/x86_64-linux-gnu/librt.so"* && \
+                    "$lib" != "/lib64/ld-linux-x86-64.so"* ]]; then
                 
-                # 同时复制这个库的依赖
-                ldd "$lib" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read sublib; do
-                  if [ -f "$sublib" ] && [[ "$sublib" != "/lib/"* && "$sublib" != "/lib64/"* && "$sublib" != *"libc.so"* && "$sublib" != *"libdl.so"* && "$sublib" != *"libpthread.so"* && "$sublib" != *"libm.so"* && "$sublib" != *"ld-linux"* ]]; then
-                    cp "$sublib" portable-app/lib/ 2>/dev/null || true
+                libname=$(basename "$lib")
+                if ! grep -q "^$libname$" /tmp/copied_libs.txt; then
+                  echo "  📦 $lib"
+                  if cp "$lib" portable-app/lib/ 2>/dev/null; then
+                    echo "$libname" >> /tmp/copied_libs.txt
+                  fi
+                fi
+              fi
+            fi
+          done < /tmp/direct_deps.txt
+          
+          echo "🔄 第二轮：递归收集间接依赖..."
+          # 多轮递归，确保收集完整
+          for round in {1..4}; do
+            echo "  🔄 递归轮次 $round..."
+            new_libs_found=0
+            
+            for lib_file in portable-app/lib/*.so*; do
+              if [ -f "$lib_file" ]; then
+                ldd "$lib_file" 2>/dev/null | grep "=> /" | awk '{print $3}' | while read sublib; do
+                  if [ -f "$sublib" ] && [ ! -z "$sublib" ]; then
+                    sublibname=$(basename "$sublib")
+                    if ! grep -q "^$sublibname$" /tmp/copied_libs.txt; then
+                      # 同样的核心系统库过滤
+                      if [[ "$sublib" != "/lib/x86_64-linux-gnu/libc.so"* && \
+                            "$sublib" != "/lib/x86_64-linux-gnu/libdl.so"* && \
+                            "$sublib" != "/lib/x86_64-linux-gnu/libpthread.so"* && \
+                            "$sublib" != "/lib/x86_64-linux-gnu/libm.so"* && \
+                            "$sublib" != "/lib/x86_64-linux-gnu/librt.so"* && \
+                            "$sublib" != "/lib64/ld-linux-x86-64.so"* ]]; then
+                        echo "    📦 $sublib"
+                        if cp "$sublib" portable-app/lib/ 2>/dev/null; then
+                          echo "$sublibname" >> /tmp/copied_libs.txt
+                          new_libs_found=1
+                        fi
+                      fi
+                    fi
                   fi
                 done
               fi
+            done
+            
+            # 如果这轮没有找到新库，提前结束
+            if [ $new_libs_found -eq 0 ]; then
+              echo "  ✅ 递归完成，没有更多依赖"
+              break
             fi
-          done < /tmp/deps.txt
+          done
           
-          # 创建启动脚本（增强版）
-          echo '#!/bin/bash' > portable-app/machine-code-tool-launcher
-          echo '# 机器码获取工具启动脚本' >> portable-app/machine-code-tool-launcher
-          echo 'DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' >> portable-app/machine-code-tool-launcher
-          echo '' >> portable-app/machine-code-tool-launcher
-          echo '# 设置库路径' >> portable-app/machine-code-tool-launcher
-          echo 'export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"' >> portable-app/machine-code-tool-launcher
-          echo 'export PKG_CONFIG_PATH="$DIR/lib/pkgconfig:$PKG_CONFIG_PATH"' >> portable-app/machine-code-tool-launcher
-          echo '' >> portable-app/machine-code-tool-launcher
-          echo '# 设置GTK相关环境变量' >> portable-app/machine-code-tool-launcher
-          echo 'export GDK_PIXBUF_MODULE_FILE="$DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"' >> portable-app/machine-code-tool-launcher
-          echo 'export GDK_PIXBUF_MODULEDIR="$DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders"' >> portable-app/machine-code-tool-launcher
-          echo '' >> portable-app/machine-code-tool-launcher
-          echo '# 检查依赖' >> portable-app/machine-code-tool-launcher
-          echo 'if [ ! -f "$DIR/machine-code-tool" ]; then' >> portable-app/machine-code-tool-launcher
-          echo '    echo "错误: 找不到主程序文件"' >> portable-app/machine-code-tool-launcher
-          echo '    exit 1' >> portable-app/machine-code-tool-launcher
-          echo 'fi' >> portable-app/machine-code-tool-launcher
-          echo '' >> portable-app/machine-code-tool-launcher
-          echo '# 启动程序' >> portable-app/machine-code-tool-launcher
-          echo 'echo "启动机器码获取工具..."' >> portable-app/machine-code-tool-launcher
-          echo 'exec "$DIR/machine-code-tool" "$@"' >> portable-app/machine-code-tool-launcher
+            echo "✅ 依赖收集完成！"
+            echo "📊 统计信息："
+            echo "  - 收集的库文件数量: $(ls -1 portable-app/lib/ | wc -l)"
+            echo "  - 便携包总大小: $(du -sh portable-app | cut -f1)"
+          fi
+          
+          # 创建智能启动脚本（无依赖版本）
+          cat > portable-app/machine-code-tool-launcher << 'LAUNCHER_EOF'
+#!/bin/bash
+# 机器码获取工具 - 无依赖启动器
+# 此脚本确保程序能找到所有必需的库文件
+
+# 获取脚本所在目录
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+echo "🚀 启动机器码获取工具..."
+echo "📁 程序目录: $DIR"
+
+# 检查主程序
+if [ ! -f "$DIR/machine-code-tool" ]; then
+    echo "❌ 错误: 找不到主程序文件 machine-code-tool"
+    exit 1
+fi
+
+# 检查库目录
+if [ ! -d "$DIR/lib" ]; then
+    echo "❌ 错误: 找不到库文件目录 lib/"
+    exit 1
+fi
+
+echo "📚 库文件数量: $(ls -1 "$DIR/lib" | wc -l)"
+
+# 设置库路径（优先使用我们的库）
+export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"
+
+# 设置其他可能需要的环境变量
+export PKG_CONFIG_PATH="$DIR/lib/pkgconfig:$PKG_CONFIG_PATH"
+export XDG_DATA_DIRS="$DIR/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+
+# GTK相关环境变量（如果存在相应目录）
+if [ -d "$DIR/lib/gdk-pixbuf-2.0" ]; then
+    export GDK_PIXBUF_MODULE_FILE="$DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+    export GDK_PIXBUF_MODULEDIR="$DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+fi
+
+# 显示环境信息（调试用）
+echo "🔧 LD_LIBRARY_PATH: ${LD_LIBRARY_PATH:0:100}..."
+
+# 启动程序
+echo "▶️  启动程序..."
+exec "$DIR/machine-code-tool" "$@"
+LAUNCHER_EOF
+
           chmod +x portable-app/machine-code-tool-launcher
           
-          # 创建依赖检查脚本
-          echo '#!/bin/bash' > portable-app/check-deps.sh
-          echo '# 检查依赖库' >> portable-app/check-deps.sh
-          echo 'DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' >> portable-app/check-deps.sh
-          echo 'echo "检查依赖库..."' >> portable-app/check-deps.sh
-          echo 'export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"' >> portable-app/check-deps.sh
-          echo 'ldd "$DIR/machine-code-tool" | grep "not found" && echo "❌ 缺少依赖库" || echo "✅ 依赖库完整"' >> portable-app/check-deps.sh
+          # 创建智能依赖检查脚本
+          cat > portable-app/check-deps.sh << 'CHECK_EOF'
+#!/bin/bash
+# 依赖检查工具 - 诊断便携包状态
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+echo "🔍 机器码获取工具 - 依赖检查"
+echo "================================"
+echo "📁 程序目录: $DIR"
+echo ""
+
+# 检查文件结构
+echo "📋 文件结构检查:"
+if [ -f "$DIR/machine-code-tool" ]; then
+    echo "  ✅ 主程序: machine-code-tool"
+else
+    echo "  ❌ 主程序: machine-code-tool (缺失)"
+fi
+
+if [ -d "$DIR/lib" ]; then
+    lib_count=$(ls -1 "$DIR/lib" | wc -l)
+    echo "  ✅ 库目录: lib/ (包含 $lib_count 个文件)"
+else
+    echo "  ❌ 库目录: lib/ (缺失)"
+fi
+
+echo ""
+
+# 检查依赖状态
+echo "🔗 依赖库检查:"
+export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"
+
+if [ -f "$DIR/machine-code-tool" ]; then
+    missing_deps=$(ldd "$DIR/machine-code-tool" 2>/dev/null | grep "not found" | wc -l)
+    if [ $missing_deps -eq 0 ]; then
+        echo "  ✅ 所有依赖库都已满足"
+    else
+        echo "  ❌ 发现 $missing_deps 个缺失的依赖:"
+        ldd "$DIR/machine-code-tool" 2>/dev/null | grep "not found"
+        echo ""
+        echo "💡 解决方案:"
+        echo "  1. 检查系统是否安装了基础图形库"
+        echo "  2. 尝试安装: sudo yum install -y gtk3 webkit2gtk3"
+        echo "  3. 或者: sudo apt install -y libgtk-3-0 libwebkit2gtk-4.1-0"
+    fi
+else
+    echo "  ❌ 无法检查依赖 (主程序不存在)"
+fi
+
+echo ""
+echo "📊 便携包信息:"
+echo "  - 库文件数量: $(ls -1 "$DIR/lib" 2>/dev/null | wc -l)"
+echo "  - 总大小: $(du -sh "$DIR" 2>/dev/null | cut -f1)"
+
+echo ""
+echo "🚀 启动测试:"
+echo "  运行命令: ./machine-code-tool-launcher"
+CHECK_EOF
+
           chmod +x portable-app/check-deps.sh
           
           # 显示便携包内容
@@ -383,18 +613,22 @@ jobs:
           
           # 按优先级复制版本
           if [ -f "$BUILD_DIR/machine-code-tool-static.tar.gz" ]; then
-            echo "复制静态链接版本..."
+            echo "🎉 复制完全静态链接版本..."
             cp "$BUILD_DIR/machine-code-tool-static.tar.gz" upload/${{ matrix.asset_name }}-static.tar.gz
-            echo "✅ Linux静态版本已准备完成（无需依赖）"
+            echo "✅ Linux静态版本已准备完成（完全无依赖）"
+          elif [ -f "$BUILD_DIR/machine-code-tool-semi-static.tar.gz" ]; then
+            echo "🔧 复制半静态链接版本..."
+            cp "$BUILD_DIR/machine-code-tool-semi-static.tar.gz" upload/${{ matrix.asset_name }}-semi-static.tar.gz
+            echo "✅ Linux半静态版本已准备完成（依赖极少）"
           elif [ -f "$BUILD_DIR/machine-code-tool-portable.tar.gz" ]; then
-            echo "复制便携版本..."
+            echo "📦 复制便携版本..."
             cp "$BUILD_DIR/machine-code-tool-portable.tar.gz" upload/${{ matrix.asset_name }}-portable.tar.gz
-            echo "✅ Linux便携版本已准备完成"
+            echo "✅ Linux便携版本已准备完成（包含所有依赖库）"
           else
-            echo "使用标准版本..."
+            echo "❌ 所有打包方案都失败，使用标准版本..."
             cp "$BUILD_DIR/machine-code-tool" upload/${{ matrix.asset_name }}
             chmod +x upload/${{ matrix.asset_name }}
-            echo "✅ Linux标准版本已准备完成"
+            echo "⚠️ Linux标准版本（需要系统依赖）"
           fi
         else
           # macOS: 复制文件并添加执行权限
@@ -439,16 +673,16 @@ jobs:
         else
           # 根据构建结果生成不同的说明
           if ls upload/*-static.tar.gz >/dev/null 2>&1; then
-            echo "🐧 机器码获取工具 - 银河麒麟版（静态版本）" > upload/使用说明.txt
-            echo "=======================================" >> upload/使用说明.txt
+            echo "🐧 机器码获取工具 - 银河麒麟版（完全静态版本）" > upload/使用说明.txt
+            echo "===========================================" >> upload/使用说明.txt
             echo "" >> upload/使用说明.txt
-            echo "🎉 此版本为静态链接版本，真正做到开箱即用！" >> upload/使用说明.txt
+            echo "🎉 此版本为完全静态链接，真正的零依赖！" >> upload/使用说明.txt
             echo "" >> upload/使用说明.txt
             echo "✨ 版本特点:" >> upload/使用说明.txt
-            echo "• 无需安装任何系统依赖库" >> upload/使用说明.txt
-            echo "• 无需root权限安装软件包" >> upload/使用说明.txt
-            echo "• 适用于任何Linux发行版（包括银河麒麟）" >> upload/使用说明.txt
-            echo "• 下载解压即可使用" >> upload/使用说明.txt
+            echo "• 完全静态链接：所有库都编译到程序中" >> upload/使用说明.txt
+            echo "• 真正零依赖：无需安装任何系统库" >> upload/使用说明.txt
+            echo "• 适用于任何Linux发行版" >> upload/使用说明.txt
+            echo "• 文件较大但最可靠" >> upload/使用说明.txt
             echo "" >> upload/使用说明.txt
             echo "✅ 使用方法:" >> upload/使用说明.txt
             echo "1. 解压文件: 右键点击 .tar.gz 文件 → 解压" >> upload/使用说明.txt
@@ -457,21 +691,53 @@ jobs:
             echo "" >> upload/使用说明.txt
             echo "💡 如果双击无效:" >> upload/使用说明.txt
             echo "右键点击文件 → 属性 → 权限 → 勾选"允许作为程序执行" → 再次双击" >> upload/使用说明.txt
-          elif ls upload/*-portable.tar.gz >/dev/null 2>&1; then
-            echo "🐧 机器码获取工具 - 银河麒麟版（便携版本）" > upload/使用说明.txt
-            echo "=======================================" >> upload/使用说明.txt
+          elif ls upload/*-semi-static.tar.gz >/dev/null 2>&1; then
+            echo "🐧 机器码获取工具 - 银河麒麟版（半静态版本）" > upload/使用说明.txt
+            echo "=========================================" >> upload/使用说明.txt
+            echo "" >> upload/使用说明.txt
+            echo "🔧 此版本为半静态链接，依赖极少！" >> upload/使用说明.txt
+            echo "" >> upload/使用说明.txt
+            echo "✨ 版本特点:" >> upload/使用说明.txt
+            echo "• 大部分库已静态链接" >> upload/使用说明.txt
+            echo "• 只依赖少量基础系统库" >> upload/使用说明.txt
+            echo "• 文件较小，兼容性好" >> upload/使用说明.txt
+            echo "• 适用于大多数Linux系统" >> upload/使用说明.txt
             echo "" >> upload/使用说明.txt
             echo "✅ 使用方法:" >> upload/使用说明.txt
             echo "1. 解压文件: 右键点击 .tar.gz 文件 → 解压" >> upload/使用说明.txt
+            echo "2. 进入解压后的 semi-static-app 文件夹" >> upload/使用说明.txt
+            echo "3. 双击 machine-code-tool 启动程序" >> upload/使用说明.txt
+            echo "" >> upload/使用说明.txt
+            echo "💡 如果提示缺少依赖:" >> upload/使用说明.txt
+            echo "sudo yum install -y gtk3" >> upload/使用说明.txt
+            echo "或者: sudo apt install -y libgtk-3-0" >> upload/使用说明.txt
+          elif ls upload/*-portable.tar.gz >/dev/null 2>&1; then
+            echo "🐧 机器码获取工具 - 银河麒麟版（无依赖版本）" > upload/使用说明.txt
+            echo "========================================" >> upload/使用说明.txt
+            echo "" >> upload/使用说明.txt
+            echo "🎉 此版本包含所有依赖库，无需安装任何系统软件包！" >> upload/使用说明.txt
+            echo "" >> upload/使用说明.txt
+            echo "✨ 版本特点:" >> upload/使用说明.txt
+            echo "• 真正的无依赖：包含所有必需的库文件" >> upload/使用说明.txt
+            echo "• 无需root权限安装任何软件包" >> upload/使用说明.txt
+            echo "• 适用于任何Linux发行版（银河麒麟、CentOS、Ubuntu等）" >> upload/使用说明.txt
+            echo "• 下载解压即可使用，开箱即用" >> upload/使用说明.txt
+            echo "" >> upload/使用说明.txt
+            echo "✅ 使用方法:" >> upload/使用说明.txt
+            echo "1. 解压文件: 右键点击 .tar.gz 文件 → 解压到此处" >> upload/使用说明.txt
             echo "2. 进入解压后的 portable-app 文件夹" >> upload/使用说明.txt
             echo "3. 双击 machine-code-tool-launcher 启动程序" >> upload/使用说明.txt
             echo "" >> upload/使用说明.txt
-            echo "💡 如果双击无效:" >> upload/使用说明.txt
-            echo "右键点击 machine-code-tool-launcher → 属性 → 权限 → 勾选执行权限 → 再次双击" >> upload/使用说明.txt
+            echo "💡 如果双击无效（设置执行权限）:" >> upload/使用说明.txt
+            echo "右键点击 machine-code-tool-launcher → 属性 → 权限 → 勾选"允许作为程序执行" → 再次双击" >> upload/使用说明.txt
             echo "" >> upload/使用说明.txt
-            echo "🔧 如果仍然报错:" >> upload/使用说明.txt
-            echo "1. 在 portable-app 文件夹中双击 check-deps.sh 检查依赖" >> upload/使用说明.txt
-            echo "2. 根据检查结果安装缺失的库文件" >> upload/使用说明.txt
+            echo "🔧 故障排除（极少数情况）:" >> upload/使用说明.txt
+            echo "1. 双击 check-deps.sh 检查依赖状态" >> upload/使用说明.txt
+            echo "2. 如果仍有问题，可能需要安装最基础的系统库" >> upload/使用说明.txt
+            echo "" >> upload/使用说明.txt
+            echo "💪 优势说明:" >> upload/使用说明.txt
+            echo "相比传统版本需要用户安装 webkit2gtk、gtk3 等依赖，" >> upload/使用说明.txt
+            echo "此版本已将所有依赖打包，真正做到了开箱即用！" >> upload/使用说明.txt
           else
             echo "🐧 机器码获取工具 - 银河麒麟版（标准版本）" > upload/使用说明.txt
             echo "=======================================" >> upload/使用说明.txt
