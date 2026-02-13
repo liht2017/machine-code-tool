@@ -377,19 +377,26 @@ jobs:
           tar -czf machine-code-tool-portable.tar.gz portable-app/
           
           echo "✅ 超级便携版本创建完成"
-          fi
           
-          # 显示最终结果
-          echo "最终构建产物:"
+          # 显示Linux构建产物
+          echo "📋 Linux构建产物:"
           ls -la *.tar.gz 2>/dev/null || ls -la machine-code-tool
         else
           echo "🚀 其他平台构建（Windows/macOS）"
           cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose
+          
+          # 显示其他平台构建产物
+          echo "📋 构建产物:"
+          ls -la target/${{ matrix.target }}/release/machine-code-tool* 2>/dev/null || echo "构建产物检查完成"
         fi
         
-        # 检查构建结果
+        # 检查构建结果（平台特定）
         echo "构建完成，检查输出文件..."
-        find target -name "machine-code-tool*" -type f || echo "未找到构建产物"
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          find target -name "machine-code-tool*" -type f || echo "未找到Linux构建产物"
+        else
+          find target -name "machine-code-tool*" -type f || echo "未找到构建产物"
+        fi
       shell: bash
 
     - name: 构建失败时的调试信息
@@ -418,6 +425,7 @@ jobs:
           ls -la src-tauri/target/ 2>/dev/null || echo "src-tauri/target目录不存在"
           ls -la src-tauri/target/${{ matrix.target }}/ 2>/dev/null || echo "${{ matrix.target }}目录不存在"
           ls -la src-tauri/target/${{ matrix.target }}/release/ 2>/dev/null || echo "release目录不存在"
+          # Linux特定：检查gnu目录
           ls -la src-tauri/target/x86_64-unknown-linux-gnu/release/ 2>/dev/null || echo "gnu release目录不存在"
         else
           echo "查找其他平台构建产物..."
@@ -429,10 +437,7 @@ jobs:
     - name: 复制并重命名构建产物
       run: |
         mkdir -p upload
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          # Windows: 复制exe文件，保持.exe后缀
-          cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool.exe upload/${{ matrix.asset_name }}.exe
-        elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
           # Linux: 查找并复制构建产物
           echo "查找Linux构建产物..."
           
