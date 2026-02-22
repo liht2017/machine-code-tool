@@ -114,6 +114,16 @@ jobs:
           echo 'echo "目录内容:"' >> ubuntu-static-build.sh
           echo 'ls -la' >> ubuntu-static-build.sh
           echo '' >> ubuntu-static-build.sh
+          echo '# 检查并创建前端资源' >> ubuntu-static-build.sh
+          echo 'echo "🎨 检查前端资源..."' >> ubuntu-static-build.sh
+          echo 'if [ ! -d "dist" ]; then' >> ubuntu-static-build.sh
+          echo '    echo "创建基础前端资源目录..."' >> ubuntu-static-build.sh
+          echo '    mkdir -p dist' >> ubuntu-static-build.sh
+          echo '    echo "<!DOCTYPE html><html><head><title>机器码获取工具</title></head><body><h1>机器码获取工具</h1></body></html>" > dist/index.html' >> ubuntu-static-build.sh
+          echo 'fi' >> ubuntu-static-build.sh
+          echo 'echo "前端资源检查完成"' >> ubuntu-static-build.sh
+          echo 'ls -la dist/' >> ubuntu-static-build.sh
+          echo '' >> ubuntu-static-build.sh
           echo 'echo "🚀 开始构建..."' >> ubuntu-static-build.sh
           echo 'cargo tauri build --no-bundle --verbose' >> ubuntu-static-build.sh
           echo '' >> ubuntu-static-build.sh
