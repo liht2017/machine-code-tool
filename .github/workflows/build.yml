@@ -77,8 +77,8 @@ jobs:
         echo "Tauri版本: $(cargo tauri --version)"
         
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          echo "🎯 Linux构建：使用Alpine Linux Docker进行完全静态构建"
-          echo "🐳 创建无任何依赖的静态链接版本"
+          echo "🎯 Linux构建：使用Ubuntu容器进行静态构建"
+          echo "🐳 创建尽可能静态的版本"
           
           # 创建Alpine静态构建脚本
           echo '#!/bin/sh' > alpine-static-build.sh
@@ -195,30 +195,21 @@ jobs:
           echo '    exit 1' >> alpine-static-build.sh
           echo 'fi' >> alpine-static-build.sh
 
-          chmod +x alpine-static-build.sh
+          chmod +x ubuntu-static-build.sh
           
-          echo "🐳 启动Alpine容器进行静态构建..."
-          # 尝试直接运行Docker，如果失败则使用sudo
-          if docker run --rm \
+          echo "🐳 启动Ubuntu容器进行构建..."
+          # 使用Ubuntu容器避免Alpine的musl问题
+          sudo docker run --rm \
             -v "$(pwd):/workspace" \
             -w /workspace \
-            alpine:latest \
-            ./alpine-static-build.sh 2>/dev/null; then
-            echo "✅ Docker运行成功"
-          else
-            echo "🔧 使用sudo运行Docker..."
-            sudo docker run --rm \
-              -v "$(pwd):/workspace" \
-              -w /workspace \
-              alpine:latest \
-              ./alpine-static-build.sh
-          fi
+            ubuntu:22.04 \
+            ./ubuntu-static-build.sh
             
           echo "✅ Alpine静态构建完成"
           
-          # 复制静态构建结果
-          if [ -f "src-tauri/target/x86_64-unknown-linux-musl/release/machine-code-tool" ]; then
-            cp src-tauri/target/x86_64-unknown-linux-musl/release/machine-code-tool machine-code-tool-kylin-static
+          # 复制构建结果
+          if [ -f "target/release/machine-code-tool" ]; then
+            cp target/release/machine-code-tool machine-code-tool-kylin-static
             chmod +x machine-code-tool-kylin-static
             
             echo "📦 最终静态版本已准备: machine-code-tool-kylin-static"
