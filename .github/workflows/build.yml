@@ -81,54 +81,52 @@ jobs:
           echo "🐳 创建尽可能静态的版本"
           
           # 创建Ubuntu构建脚本
-          cat > ubuntu-static-build.sh << 'EOF'
-#!/bin/bash
-set -e
-
-echo "🐧 Ubuntu 构建环境初始化"
-echo "📦 安装构建依赖..."
-
-# 更新包管理器
-apt-get update
-
-# 安装基础构建工具
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    curl \
-    build-essential \
-    pkg-config \
-    libssl-dev \
-    libgtk-3-dev \
-    libwebkit2gtk-4.1-dev \
-    libayatana-appindicator3-dev \
-    librsvg2-dev
-
-echo "🦀 安装Rust..."
-curl --proto='=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-source ~/.cargo/env
-
-echo "🔧 安装Tauri CLI..."
-cargo install tauri-cli --locked
-
-# 进入源码目录
-cd /workspace
-echo "当前目录: $(pwd)"
-echo "目录内容:"
-ls -la
-
-echo "🚀 开始构建..."
-cargo tauri build --no-bundle --verbose
-
-echo "✅ 构建完成，验证结果..."
-if [ -f "target/release/machine-code-tool" ]; then
-    echo "📦 构建产物大小："
-    ls -lh target/release/machine-code-tool
-    echo "🔍 检查依赖："
-    ldd target/release/machine-code-tool || echo "依赖检查完成"
-else
-    echo "❌ 构建失败，未找到可执行文件"
-    exit 1
-fi
-EOF
+          echo '#!/bin/bash' > ubuntu-static-build.sh
+          echo 'set -e' >> ubuntu-static-build.sh
+          echo '' >> ubuntu-static-build.sh
+          echo 'echo "🐧 Ubuntu 构建环境初始化"' >> ubuntu-static-build.sh
+          echo 'echo "📦 安装构建依赖..."' >> ubuntu-static-build.sh
+          echo '' >> ubuntu-static-build.sh
+          echo '# 更新包管理器' >> ubuntu-static-build.sh
+          echo 'apt-get update' >> ubuntu-static-build.sh
+          echo '' >> ubuntu-static-build.sh
+          echo '# 安装基础构建工具' >> ubuntu-static-build.sh
+          echo 'DEBIAN_FRONTEND=noninteractive apt-get install -y \' >> ubuntu-static-build.sh
+          echo '    curl \' >> ubuntu-static-build.sh
+          echo '    build-essential \' >> ubuntu-static-build.sh
+          echo '    pkg-config \' >> ubuntu-static-build.sh
+          echo '    libssl-dev \' >> ubuntu-static-build.sh
+          echo '    libgtk-3-dev \' >> ubuntu-static-build.sh
+          echo '    libwebkit2gtk-4.1-dev \' >> ubuntu-static-build.sh
+          echo '    libayatana-appindicator3-dev \' >> ubuntu-static-build.sh
+          echo '    librsvg2-dev' >> ubuntu-static-build.sh
+          echo '' >> ubuntu-static-build.sh
+          echo 'echo "🦀 安装Rust..."' >> ubuntu-static-build.sh
+          echo 'curl --proto="=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable' >> ubuntu-static-build.sh
+          echo 'source ~/.cargo/env' >> ubuntu-static-build.sh
+          echo '' >> ubuntu-static-build.sh
+          echo 'echo "🔧 安装Tauri CLI..."' >> ubuntu-static-build.sh
+          echo 'cargo install tauri-cli --locked' >> ubuntu-static-build.sh
+          echo '' >> ubuntu-static-build.sh
+          echo '# 进入源码目录' >> ubuntu-static-build.sh
+          echo 'cd /workspace' >> ubuntu-static-build.sh
+          echo 'echo "当前目录: $(pwd)"' >> ubuntu-static-build.sh
+          echo 'echo "目录内容:"' >> ubuntu-static-build.sh
+          echo 'ls -la' >> ubuntu-static-build.sh
+          echo '' >> ubuntu-static-build.sh
+          echo 'echo "🚀 开始构建..."' >> ubuntu-static-build.sh
+          echo 'cargo tauri build --no-bundle --verbose' >> ubuntu-static-build.sh
+          echo '' >> ubuntu-static-build.sh
+          echo 'echo "✅ 构建完成，验证结果..."' >> ubuntu-static-build.sh
+          echo 'if [ -f "target/release/machine-code-tool" ]; then' >> ubuntu-static-build.sh
+          echo '    echo "📦 构建产物大小："' >> ubuntu-static-build.sh
+          echo '    ls -lh target/release/machine-code-tool' >> ubuntu-static-build.sh
+          echo '    echo "🔍 检查依赖："' >> ubuntu-static-build.sh
+          echo '    ldd target/release/machine-code-tool || echo "依赖检查完成"' >> ubuntu-static-build.sh
+          echo 'else' >> ubuntu-static-build.sh
+          echo '    echo "❌ 构建失败，未找到可执行文件"' >> ubuntu-static-build.sh
+          echo '    exit 1' >> ubuntu-static-build.sh
+          echo 'fi' >> ubuntu-static-build.sh
 
           chmod +x ubuntu-static-build.sh
           
