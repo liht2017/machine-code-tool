@@ -80,120 +80,55 @@ jobs:
           echo "🎯 Linux构建：使用Ubuntu容器进行静态构建"
           echo "🐳 创建尽可能静态的版本"
           
-          # 创建Alpine静态构建脚本
-          echo '#!/bin/sh' > alpine-static-build.sh
-          echo 'set -e' >> alpine-static-build.sh
-          echo '' >> alpine-static-build.sh
-          echo 'echo "🏔️ Alpine Linux 静态构建环境初始化"' >> alpine-static-build.sh
-          echo 'echo "📦 安装构建依赖..."' >> alpine-static-build.sh
-          echo '' >> alpine-static-build.sh
-          echo '# 更新包管理器' >> alpine-static-build.sh
-          echo 'apk update' >> alpine-static-build.sh
-          echo '' >> alpine-static-build.sh
-          echo '# 安装基础构建工具和库' >> alpine-static-build.sh
-          echo 'apk add --no-cache \' >> alpine-static-build.sh
-          echo '    curl \' >> alpine-static-build.sh
-          echo '    gcc \' >> alpine-static-build.sh
-          echo '    g++ \' >> alpine-static-build.sh
-          echo '    musl-dev \' >> alpine-static-build.sh
-          echo '    gcompat \' >> alpine-static-build.sh
-          echo '    libc6-compat \' >> alpine-static-build.sh
-          echo '    pkgconfig \' >> alpine-static-build.sh
-          echo '    make \' >> alpine-static-build.sh
-          echo '    perl \' >> alpine-static-build.sh
-          echo '    linux-headers' >> alpine-static-build.sh
-          echo '' >> alpine-static-build.sh
-          echo '# 安装GTK和WebKit开发库（简化版本）' >> alpine-static-build.sh
-          echo 'apk add --no-cache \' >> alpine-static-build.sh
-          echo '    gtk+3.0-dev \' >> alpine-static-build.sh
-          echo '    webkit2gtk-4.1-dev \' >> alpine-static-build.sh
-          echo '    || echo "WebKit安装失败，尝试备用方案..."' >> alpine-static-build.sh
-          echo '' >> alpine-static-build.sh
-          echo '# 如果WebKit安装失败，尝试最小化依赖' >> alpine-static-build.sh
-          echo 'if ! apk info webkit2gtk-4.1-dev >/dev/null 2>&1; then' >> alpine-static-build.sh
-          echo '    echo "使用最小化GTK依赖..."' >> alpine-static-build.sh
-          echo '    apk add --no-cache \' >> alpine-static-build.sh
-          echo '        cairo-dev \' >> alpine-static-build.sh
-          echo '        pango-dev \' >> alpine-static-build.sh
-          echo '        gdk-pixbuf-dev \' >> alpine-static-build.sh
-          echo '        glib-dev \' >> alpine-static-build.sh
-          echo '        fontconfig-dev \' >> alpine-static-build.sh
-          echo '        freetype-dev' >> alpine-static-build.sh
-          echo 'fi' >> alpine-static-build.sh
-          echo '' >> alpine-static-build.sh
-          echo 'echo "🦀 安装Rust..."' >> alpine-static-build.sh
-          echo 'curl --proto="=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable' >> alpine-static-build.sh
-          echo 'source ~/.cargo/env' >> alpine-static-build.sh
-          echo '' >> alpine-static-build.sh
-          echo '# 添加目标架构' >> alpine-static-build.sh
-          echo 'rustup target add x86_64-unknown-linux-musl' >> alpine-static-build.sh
-          echo 'rustup target add x86_64-unknown-linux-gnu' >> alpine-static-build.sh
-          echo '' >> alpine-static-build.sh
-          echo 'echo "🔧 尝试安装Tauri CLI..."' >> alpine-static-build.sh
-          echo '# 方案1: 尝试使用默认目标编译（避免musl问题）' >> alpine-static-build.sh
-          echo 'unset RUSTFLAGS' >> alpine-static-build.sh
-          echo 'unset PKG_CONFIG_ALL_STATIC' >> alpine-static-build.sh
-          echo 'unset CC' >> alpine-static-build.sh
-          echo 'unset CXX' >> alpine-static-build.sh
-          echo 'if cargo install tauri-cli --locked --version 2.10.0 2>/dev/null; then' >> alpine-static-build.sh
-          echo '    echo "✅ Tauri CLI安装成功"' >> alpine-static-build.sh
-          echo 'else' >> alpine-static-build.sh
-          echo '    echo "⚠️ 方案1失败，尝试方案2：使用旧版本..."' >> alpine-static-build.sh
-          echo '    if cargo install tauri-cli --locked --version 1.5.0 2>/dev/null; then' >> alpine-static-build.sh
-          echo '        echo "✅ 使用旧版本Tauri CLI成功"' >> alpine-static-build.sh
-          echo '    else' >> alpine-static-build.sh
-          echo '        echo "❌ 所有方案都失败了，使用cargo build替代"' >> alpine-static-build.sh
-          echo '        echo "将直接使用cargo build进行构建"' >> alpine-static-build.sh
-          echo '    fi' >> alpine-static-build.sh
-          echo 'fi' >> alpine-static-build.sh
-          echo '' >> alpine-static-build.sh
-          echo 'echo "🔧 配置静态链接环境用于最终构建..."' >> alpine-static-build.sh
-          echo 'export PKG_CONFIG_ALL_STATIC=1' >> alpine-static-build.sh
-          echo 'export PKG_CONFIG_ALL_LIBS=1' >> alpine-static-build.sh
-          echo 'export RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-static"' >> alpine-static-build.sh
-          echo 'export CC=musl-gcc' >> alpine-static-build.sh
-          echo 'export CXX=musl-g++' >> alpine-static-build.sh
-          echo '' >> alpine-static-build.sh
-          echo '# 检查并进入源码目录' >> alpine-static-build.sh
-          echo 'echo "当前目录: $(pwd)"' >> alpine-static-build.sh
-          echo 'echo "工作空间内容:"' >> alpine-static-build.sh
-          echo 'ls -la /workspace/' >> alpine-static-build.sh
-          echo 'if [ -d "/workspace/src-tauri" ]; then' >> alpine-static-build.sh
-          echo '    cd /workspace/src-tauri' >> alpine-static-build.sh
-          echo 'elif [ -d "/workspace" ]; then' >> alpine-static-build.sh
-          echo '    cd /workspace' >> alpine-static-build.sh
-          echo '    if [ -f "src-tauri/Cargo.toml" ]; then' >> alpine-static-build.sh
-          echo '        cd src-tauri' >> alpine-static-build.sh
-          echo '    fi' >> alpine-static-build.sh
-          echo 'else' >> alpine-static-build.sh
-          echo '    echo "错误: 找不到源码目录"' >> alpine-static-build.sh
-          echo '    exit 1' >> alpine-static-build.sh
-          echo 'fi' >> alpine-static-build.sh
-          echo 'echo "最终工作目录: $(pwd)"' >> alpine-static-build.sh
-          echo '' >> alpine-static-build.sh
-          echo 'echo "🚀 安装Tauri CLI..."' >> alpine-static-build.sh
-          echo 'cargo install tauri-cli --locked' >> alpine-static-build.sh
-          echo '' >> alpine-static-build.sh
-          echo 'echo "🚀 开始完全静态构建..."' >> alpine-static-build.sh
-          echo '# 检查是否有tauri命令可用' >> alpine-static-build.sh
-          echo 'if command -v cargo-tauri >/dev/null 2>&1; then' >> alpine-static-build.sh
-          echo '    echo "使用Tauri CLI构建..."' >> alpine-static-build.sh
-          echo '    cargo tauri build --target x86_64-unknown-linux-musl --no-bundle --verbose' >> alpine-static-build.sh
-          echo 'else' >> alpine-static-build.sh
-          echo '    echo "使用cargo build直接构建..."' >> alpine-static-build.sh
-          echo '    cargo build --release --target x86_64-unknown-linux-musl --verbose' >> alpine-static-build.sh
-          echo 'fi' >> alpine-static-build.sh
-          echo '' >> alpine-static-build.sh
-          echo 'echo "✅ 静态构建完成，验证结果..."' >> alpine-static-build.sh
-          echo 'if [ -f "target/x86_64-unknown-linux-musl/release/machine-code-tool" ]; then' >> alpine-static-build.sh
-          echo '    echo "📦 构建产物大小："' >> alpine-static-build.sh
-          echo '    ls -lh target/x86_64-unknown-linux-musl/release/machine-code-tool' >> alpine-static-build.sh
-          echo '    echo "🔍 验证静态链接（应该显示not a dynamic executable）："' >> alpine-static-build.sh
-          echo '    ldd target/x86_64-unknown-linux-musl/release/machine-code-tool || echo "✅ 完全静态链接成功"' >> alpine-static-build.sh
-          echo 'else' >> alpine-static-build.sh
-          echo '    echo "❌ 构建失败，未找到可执行文件"' >> alpine-static-build.sh
-          echo '    exit 1' >> alpine-static-build.sh
-          echo 'fi' >> alpine-static-build.sh
+          # 创建Ubuntu构建脚本
+          cat > ubuntu-static-build.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "🐧 Ubuntu 构建环境初始化"
+echo "📦 安装构建依赖..."
+
+# 更新包管理器
+apt-get update
+
+# 安装基础构建工具
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    curl \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    libgtk-3-dev \
+    libwebkit2gtk-4.1-dev \
+    libayatana-appindicator3-dev \
+    librsvg2-dev
+
+echo "🦀 安装Rust..."
+curl --proto='=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+source ~/.cargo/env
+
+echo "🔧 安装Tauri CLI..."
+cargo install tauri-cli --locked
+
+# 进入源码目录
+cd /workspace
+echo "当前目录: $(pwd)"
+echo "目录内容:"
+ls -la
+
+echo "🚀 开始构建..."
+cargo tauri build --no-bundle --verbose
+
+echo "✅ 构建完成，验证结果..."
+if [ -f "target/release/machine-code-tool" ]; then
+    echo "📦 构建产物大小："
+    ls -lh target/release/machine-code-tool
+    echo "🔍 检查依赖："
+    ldd target/release/machine-code-tool || echo "依赖检查完成"
+else
+    echo "❌ 构建失败，未找到可执行文件"
+    exit 1
+fi
+EOF
 
           chmod +x ubuntu-static-build.sh
           
