@@ -102,7 +102,7 @@ jobs:
           echo '    librsvg2-dev' >> ubuntu-static-build.sh
           echo '' >> ubuntu-static-build.sh
           echo 'echo "🦀 安装Rust..."' >> ubuntu-static-build.sh
-          echo 'curl --proto=https --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable' >> ubuntu-static-build.sh
+          echo 'curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable' >> ubuntu-static-build.sh
           echo 'source ~/.cargo/env' >> ubuntu-static-build.sh
           echo '' >> ubuntu-static-build.sh
           echo 'echo "🔧 安装Tauri CLI..."' >> ubuntu-static-build.sh
