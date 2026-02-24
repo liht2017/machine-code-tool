@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgcrypt20-dev libgpg-error-dev libtasn1-dev \
     libsoup-3.0-dev libgtk-4-dev \
     libx11-dev libwayland-dev wayland-protocols \
-    imagemagick gcc-10 g++-10 clang-10 ruby unifdef gperf bison flex \
+    imagemagick gcc-10 g++-10 clang-10 ruby unifdef gperf bison flex gettext \
     && rm -rf /var/lib/apt/lists/*
 
 # libsoup3 已通过 PPA 安装，无需从源码编译
@@ -60,7 +60,7 @@ RUN bash -c 'set -e; v='"${WEBKIT_VERSION}"'; \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -GNinja \
         -DCMAKE_THREAD_LIBS_INIT="-lpthread" \
-        -DCMAKE_EXE_LINKER_FLAGS="-lpthread -latomic" \
+        -DCMAKE_EXE_LINKER_FLAGS="-lpthread -latomic -lrt" \
         -DENABLE_MINIBROWSER=OFF -DENABLE_GLES2=OFF -DENABLE_GAMEPAD=OFF \
         -DUSE_LIBSECRET=OFF -DENABLE_DOCUMENTATION=OFF -DENABLE_INTROSPECTION=OFF \
         -DENABLE_SPELLCHECK=OFF -DENABLE_SPEECH_SYNTHESIS=OFF -DUSE_LIBHYPHEN=OFF \
