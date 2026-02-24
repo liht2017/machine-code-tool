@@ -42,14 +42,6 @@ jobs:
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: 检查Docker环境 (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        echo "🐳 检查Docker环境..."
-        docker --version
-        docker info || sudo docker info
-        echo "✅ Docker环境检查完成"
-
     - name: 安装系统依赖 (macOS)
       if: matrix.os == 'macos-latest'
       run: |
@@ -77,116 +69,52 @@ jobs:
         echo "Tauri版本: $(cargo tauri --version)"
         
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          echo "🎯 Linux构建：产出 AppImage（单文件自带依赖，下载即用、无需安装）"
-          echo "🐳 使用 Ubuntu 22.04 容器（Tauri 2 需 WebKit2GTK 4.1，仅 22.04+ 提供）"
-          
-          # 创建 Ubuntu 构建脚本（完整 bundle 生成 AppImage）
-          echo '#!/bin/bash' > ubuntu-appimage-build.sh
-          echo 'set -e' >> ubuntu-appimage-build.sh
-          echo '' >> ubuntu-appimage-build.sh
-          echo 'echo "🐧 Ubuntu 22.04 构建环境初始化"' >> ubuntu-appimage-build.sh
-          echo 'echo "📦 安装构建依赖..."' >> ubuntu-appimage-build.sh
-          echo '' >> ubuntu-appimage-build.sh
-          echo 'apt-get update' >> ubuntu-appimage-build.sh
-          echo '' >> ubuntu-appimage-build.sh
-          echo 'DEBIAN_FRONTEND=noninteractive apt-get install -y \' >> ubuntu-appimage-build.sh
-          echo '    curl \' >> ubuntu-appimage-build.sh
-          echo '    build-essential \' >> ubuntu-appimage-build.sh
-          echo '    pkg-config \' >> ubuntu-appimage-build.sh
-          echo '    libssl-dev \' >> ubuntu-appimage-build.sh
-          echo '    libgtk-3-dev \' >> ubuntu-appimage-build.sh
-          echo '    libwebkit2gtk-4.1-dev \' >> ubuntu-appimage-build.sh
-          echo '    libayatana-appindicator3-dev \' >> ubuntu-appimage-build.sh
-          echo '    librsvg2-dev \' >> ubuntu-appimage-build.sh
-          echo '    libfuse2 \' >> ubuntu-appimage-build.sh
-          echo '    file \' >> ubuntu-appimage-build.sh
-          echo '    imagemagick' >> ubuntu-appimage-build.sh
-          echo '' >> ubuntu-appimage-build.sh
-          echo 'echo "🦀 安装 Rust..."' >> ubuntu-appimage-build.sh
-          echo 'curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable' >> ubuntu-appimage-build.sh
-          echo 'source ~/.cargo/env' >> ubuntu-appimage-build.sh
-          echo '' >> ubuntu-appimage-build.sh
-          echo 'echo "🔧 安装 Tauri CLI..."' >> ubuntu-appimage-build.sh
-          echo 'cargo install tauri-cli --locked' >> ubuntu-appimage-build.sh
-          echo '' >> ubuntu-appimage-build.sh
-          echo 'cd /workspace' >> ubuntu-appimage-build.sh
-          echo 'echo "当前目录: $(pwd)"' >> ubuntu-appimage-build.sh
-          echo 'echo "📁 icons 目录内容："' >> ubuntu-appimage-build.sh
-          echo 'ls -la icons/ 2>/dev/null || echo "icons 目录不存在或为空"' >> ubuntu-appimage-build.sh
-          echo '' >> ubuntu-appimage-build.sh
-          echo '# AppImage 要求 256x256 方图标；在容器内强制用 ImageMagick 生成确保存在且尺寸正确' >> ubuntu-appimage-build.sh
-          echo 'if [ -f "icons/512x512.png" ]; then' >> ubuntu-appimage-build.sh
-          echo '  convert icons/512x512.png -resize 256x256 icons/256x256.png' >> ubuntu-appimage-build.sh
-          echo '  echo "已从 512x512 生成 256x256 图标"' >> ubuntu-appimage-build.sh
-          echo 'elif [ -f "icons/icon.png" ]; then' >> ubuntu-appimage-build.sh
-          echo '  convert icons/icon.png -resize 256x256 icons/256x256.png' >> ubuntu-appimage-build.sh
-          echo '  echo "已从 icon.png 生成 256x256 图标"' >> ubuntu-appimage-build.sh
-          echo 'fi' >> ubuntu-appimage-build.sh
-          echo 'if [ ! -f "icons/256x256.png" ]; then echo "❌ 需要 icons/512x512.png 或 icons/icon.png 以生成 256x256"; exit 1; fi' >> ubuntu-appimage-build.sh
-          echo 'identify icons/256x256.png 2>/dev/null || true' >> ubuntu-appimage-build.sh
-          echo '' >> ubuntu-appimage-build.sh
-          echo '# 将 tauri.conf.json 中 icons/ 改为绝对路径，避免 bundler 在容器内解析相对路径失败' >> ubuntu-appimage-build.sh
-          echo 'cp tauri.conf.json tauri.conf.json.bak' >> ubuntu-appimage-build.sh
-          echo 'sed -i '\''s|"icons/|"/workspace/icons/|g'\'' tauri.conf.json' >> ubuntu-appimage-build.sh
-          echo 'grep "icon" tauri.conf.json | head -3' >> ubuntu-appimage-build.sh
-          echo '' >> ubuntu-appimage-build.sh
-          echo 'echo "🎨 创建前端资源（frontendDist 为 ../dist）..."' >> ubuntu-appimage-build.sh
-          echo 'mkdir -p /dist' >> ubuntu-appimage-build.sh
-          echo 'echo "<!DOCTYPE html><html><head><title>机器码获取工具</title></head><body><h1>机器码获取工具</h1></body></html>" > /dist/index.html' >> ubuntu-appimage-build.sh
-          echo '' >> ubuntu-appimage-build.sh
-          echo 'echo "🚀 构建完整 bundle（含 AppImage）..."' >> ubuntu-appimage-build.sh
-          echo 'cargo tauri build --verbose' >> ubuntu-appimage-build.sh
-          echo '' >> ubuntu-appimage-build.sh
-          echo 'echo "✅ 验证 AppImage 产物..."' >> ubuntu-appimage-build.sh
-          echo 'if [ -d "target/release/bundle/appimage" ]; then' >> ubuntu-appimage-build.sh
-          echo '    ls -la target/release/bundle/appimage/' >> ubuntu-appimage-build.sh
-          echo '    APPIMG=$(find target/release/bundle/appimage -maxdepth 1 -name "*.AppImage" -type f | head -1)' >> ubuntu-appimage-build.sh
-          echo '    if [ -n "$APPIMG" ]; then echo "📦 AppImage: $APPIMG"; ls -lh "$APPIMG"; else echo "❌ 未找到 .AppImage"; exit 1; fi' >> ubuntu-appimage-build.sh
-          echo 'else' >> ubuntu-appimage-build.sh
-          echo '    echo "❌ 未找到 bundle/appimage 目录"; exit 1' >> ubuntu-appimage-build.sh
-          echo 'fi' >> ubuntu-appimage-build.sh
-          echo 'mv tauri.conf.json.bak tauri.conf.json 2>/dev/null || true' >> ubuntu-appimage-build.sh
-
-          chmod +x ubuntu-appimage-build.sh
-          
-          echo "🐳 启动 Ubuntu 22.04 容器构建 AppImage..."
-          sudo docker run --rm \
-            -v "$(pwd):/workspace" \
-            -w /workspace \
-            ubuntu:22.04 \
-            ./ubuntu-appimage-build.sh
-            
-          echo "✅ Linux AppImage 构建完成"
-          
-          # 将 AppImage 复制为固定名称
+          echo "🎯 Linux构建：在 Runner 上直接构建 AppImage（避免 Docker 内路径解析问题）"
+          echo "📦 安装系统依赖..."
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev \
+            librsvg2-dev libssl-dev libfuse2 file
+          echo "📁 当前目录与 icons："
+          pwd
+          ls -la icons/ 2>/dev/null || true
+          if [ ! -f "icons/256x256.png" ]; then
+            sudo apt-get install -y -qq imagemagick 2>/dev/null || true
+            if [ -f "icons/512x512.png" ]; then convert icons/512x512.png -resize 256x256 icons/256x256.png; echo "已生成 256x256"; fi
+            if [ -f "icons/icon.png" ] && [ ! -f "icons/256x256.png" ]; then convert icons/icon.png -resize 256x256 icons/256x256.png; echo "已生成 256x256"; fi
+          fi
+          if [ ! -f "icons/256x256.png" ]; then echo "❌ 需要 icons/256x256.png 或 512x512.png 或 icon.png"; exit 1; fi
+          file icons/256x256.png
+          echo "🎨 准备前端资源 (../dist)..."
+          mkdir -p ../dist
+          echo '<!DOCTYPE html><html><head><title>机器码获取工具</title></head><body><h1>机器码获取工具</h1></body></html>' > ../dist/index.html
+          echo "🚀 构建完整 bundle（含 AppImage）..."
+          cargo tauri build --verbose
+          echo "✅ 验证 AppImage 产物..."
           APPIMG=$(find target/release/bundle/appimage -maxdepth 1 -name "*.AppImage" -type f 2>/dev/null | head -1)
-          if [ -n "$APPIMG" ] && [ -f "$APPIMG" ]; then
-            cp "$APPIMG" machine-code-tool-kylin.AppImage
-            chmod +x machine-code-tool-kylin.AppImage
-            echo "📦 已产出: machine-code-tool-kylin.AppImage"
-            ls -lh machine-code-tool-kylin.AppImage
-            
-            echo "🐧 机器码获取工具 - 银河麒麟/Linux版（AppImage）" > 使用说明.txt
-            echo "=======================================" >> 使用说明.txt
-            echo "" >> 使用说明.txt
-            echo "🎉 单文件自带依赖，无需安装任何库，下载即可使用。" >> 使用说明.txt
-            echo "" >> 使用说明.txt
-            echo "💻 使用方法：" >> 使用说明.txt
-            echo "  1. 右键 → 属性 → 权限：勾选「允许作为程序执行」" >> 使用说明.txt
-            echo "  或 终端执行：chmod +x machine-code-tool-kylin.AppImage" >> 使用说明.txt
-            echo "  2. 双击运行，或在终端执行：./machine-code-tool-kylin.AppImage" >> 使用说明.txt
-            echo "" >> 使用说明.txt
-            echo "✨ 功能：获取机器硬件信息，提供投标API服务" >> 使用说明.txt
-            echo "📝 版本：2.1.0（AppImage 便携版）" >> 使用说明.txt
-            echo "✅ Linux 打包完成"
-          else
-            echo "❌ 未找到 AppImage 产物"
+          if [ -z "$APPIMG" ] || [ ! -f "$APPIMG" ]; then
+            echo "❌ 未找到 AppImage"
             ls -la target/release/bundle/appimage/ 2>/dev/null || true
             exit 1
           fi
-          
+          cp "$APPIMG" machine-code-tool-kylin.AppImage
+          chmod +x machine-code-tool-kylin.AppImage
+          echo "📦 已产出: machine-code-tool-kylin.AppImage"
+          ls -lh machine-code-tool-kylin.AppImage
+          echo "🐧 机器码获取工具 - 银河麒麟/Linux版（AppImage）" > 使用说明.txt
+          echo "=======================================" >> 使用说明.txt
+          echo "" >> 使用说明.txt
+          echo "🎉 单文件自带依赖，无需安装任何库，下载即可使用。" >> 使用说明.txt
+          echo "" >> 使用说明.txt
+          echo "💻 使用方法：" >> 使用说明.txt
+          echo "  1. 右键 → 属性 → 权限：勾选「允许作为程序执行」" >> 使用说明.txt
+          echo "  或 终端执行：chmod +x machine-code-tool-kylin.AppImage" >> 使用说明.txt
+          echo "  2. 双击运行，或在终端执行：./machine-code-tool-kylin.AppImage" >> 使用说明.txt
+          echo "" >> 使用说明.txt
+          echo "✨ 功能：获取机器硬件信息，提供投标API服务" >> 使用说明.txt
+          echo "📝 版本：2.1.0（AppImage 便携版）" >> 使用说明.txt
           echo "📋 Linux 构建产物:"
-          ls -la machine-code-tool-kylin.AppImage 使用说明.txt 2>/dev/null || echo "构建产物检查完成"
+          ls -la machine-code-tool-kylin.AppImage 使用说明.txt 2>/dev/null || true
         elif [ "${{ matrix.os }}" = "macos-latest" ]; then
           echo "🍎 macOS构建：创建通用二进制文件"
           
