@@ -78,18 +78,28 @@ jobs:
           echo "📁 当前目录与 icons："
           pwd
           ls -la icons/ 2>/dev/null || true
-          if [ ! -f "icons/256x256.png" ]; then
-            sudo apt-get install -y -qq imagemagick 2>/dev/null || true
-            if [ -f "icons/512x512.png" ]; then convert icons/512x512.png -resize 256x256 icons/256x256.png; echo "已生成 256x256"; fi
-            if [ -f "icons/icon.png" ] && [ ! -f "icons/256x256.png" ]; then convert icons/icon.png -resize 256x256 icons/256x256.png; echo "已生成 256x256"; fi
+          sudo apt-get install -y -qq imagemagick 2>/dev/null || true
+          SRC_ICON=""
+          [ -f "icons/512x512.png" ] && SRC_ICON="icons/512x512.png"
+          [ -z "$SRC_ICON" ] && [ -f "icons/icon.png" ] && SRC_ICON="icons/icon.png"
+          if [ -n "$SRC_ICON" ]; then
+            convert "$SRC_ICON" -resize 256x256! -strip icons/256x256.png
+            convert "$SRC_ICON" -resize 512x512! -strip icons/512x512.png
+            echo "已用 ImageMagick 重新生成 256x256 与 512x512（-strip 清理元数据）"
           fi
-          if [ ! -f "icons/256x256.png" ]; then echo "❌ 需要 icons/256x256.png 或 512x512.png 或 icon.png"; exit 1; fi
-          file icons/256x256.png
+          if [ ! -f "icons/256x256.png" ]; then echo "❌ 需要 icons/512x512.png 或 icon.png"; exit 1; fi
+          file icons/256x256.png icons/512x512.png 2>/dev/null || true
+          identify icons/256x256.png icons/512x512.png 2>/dev/null || true
           echo "🎨 准备前端资源 (../dist)..."
           mkdir -p ../dist
           echo '<!DOCTYPE html><html><head><title>机器码获取工具</title></head><body><h1>机器码获取工具</h1></body></html>' > ../dist/index.html
+          echo "🔧 Linux 构建时临时使用 ASCII productName，避免 freedesktop 图标路径编码问题..."
+          cp tauri.conf.json tauri.conf.json.bak
+          sed -i 's/"productName":"机器码获取工具"/"productName":"machine-code-tool"/' tauri.conf.json
+          grep "productName" tauri.conf.json
           echo "🚀 构建完整 bundle（含 AppImage）..."
-          cargo tauri build --verbose
+          RUST_BACKTRACE=1 cargo tauri build --verbose
+          mv tauri.conf.json.bak tauri.conf.json 2>/dev/null || true
           echo "✅ 验证 AppImage 产物..."
           APPIMG=$(find target/release/bundle/appimage -maxdepth 1 -name "*.AppImage" -type f 2>/dev/null | head -1)
           if [ -z "$APPIMG" ] || [ ! -f "$APPIMG" ]; then
