@@ -77,8 +77,8 @@ jobs:
         echo "Tauri版本: $(cargo tauri --version)"
         
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          echo "🎯 Linux构建：使用Ubuntu容器进行静态构建"
-          echo "🐳 创建尽可能静态的版本"
+          echo "🎯 Linux构建：使用Ubuntu容器构建（动态链接，需系统安装 WebKitGTK）"
+          echo "🐳 生成适用于银河麒麟/Ubuntu 的可执行文件"
           
           # 创建Ubuntu构建脚本
           echo '#!/bin/bash' > ubuntu-static-build.sh
@@ -145,42 +145,43 @@ jobs:
             ubuntu:22.04 \
             ./ubuntu-static-build.sh
             
-          echo "✅ Alpine静态构建完成"
+          echo "✅ Linux 构建完成"
           
-          # 复制构建结果
+          # 复制构建结果（动态链接，需目标系统安装 libwebkit2gtk-4.1）
           if [ -f "target/release/machine-code-tool" ]; then
-            cp target/release/machine-code-tool machine-code-tool-kylin-static
-            chmod +x machine-code-tool-kylin-static
+            cp target/release/machine-code-tool machine-code-tool-kylin
+            chmod +x machine-code-tool-kylin
             
-            echo "📦 最终静态版本已准备: machine-code-tool-kylin-static"
+            echo "📦 Linux/麒麟版本已准备: machine-code-tool-kylin"
             echo "📊 文件大小："
-            ls -lh machine-code-tool-kylin-static
+            ls -lh machine-code-tool-kylin
             
-            # 最终验证
-            echo "🔍 最终验证静态链接："
-            ldd machine-code-tool-kylin-static || echo "✅ 完全静态链接，无任何依赖"
+            echo "🔍 动态库依赖（运行前需在系统安装）："
+            ldd machine-code-tool-kylin || true
             
-            # 创建简洁的使用说明
-            echo "🐧 机器码获取工具 - 银河麒麟版（静态链接）" > 使用说明.txt
+            # 使用说明（含依赖安装指引）
+            echo "🐧 机器码获取工具 - 银河麒麟/Linux版" > 使用说明.txt
             echo "=======================================" >> 使用说明.txt
             echo "" >> 使用说明.txt
-            echo "🎉 此版本为完全静态链接，无需安装任何依赖！" >> 使用说明.txt
+            echo "⚠️ 运行前请先安装依赖（需联网）：" >> 使用说明.txt
+            echo "  Ubuntu/银河麒麟(apt)：" >> 使用说明.txt
+            echo "    sudo apt update" >> 使用说明.txt
+            echo "    sudo apt install -y libwebkit2gtk-4.1-0 libgtk-3-0 libssl3" >> 使用说明.txt
+            echo "  其他发行版请安装对应 WebKit2GTK 4.1 与 GTK3 包。" >> 使用说明.txt
             echo "" >> 使用说明.txt
-            echo "💻 使用方法：" >> 使用说明.txt
-            echo "双击 machine-code-tool-kylin-static 即可运行" >> 使用说明.txt
+            echo "💻 使用方法：在终端执行 ./machine-code-tool-kylin 或双击运行" >> 使用说明.txt
             echo "" >> 使用说明.txt
             echo "✨ 功能：获取机器硬件信息，提供投标API服务" >> 使用说明.txt
-            echo "📝 版本：2.1.0 (静态链接版)" >> 使用说明.txt
+            echo "📝 版本：2.1.0" >> 使用说明.txt
             
-            echo "✅ 静态构建和打包完成"
+            echo "✅ Linux 构建和打包完成"
           else
-            echo "❌ 未找到静态构建产物"
+            echo "❌ 未找到构建产物"
             exit 1
           fi
           
-          # 显示Linux构建产物
           echo "📋 Linux构建产物:"
-          ls -la machine-code-tool-kylin-static 使用说明.txt 2>/dev/null || echo "静态构建产物检查完成"
+          ls -la machine-code-tool-kylin 使用说明.txt 2>/dev/null || echo "构建产物检查完成"
         elif [ "${{ matrix.os }}" = "macos-latest" ]; then
           echo "🍎 macOS构建：创建通用二进制文件"
           
@@ -221,14 +222,14 @@ jobs:
       run: |
         mkdir -p upload
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          # Linux: 复制静态构建版本（产物在 src-tauri/ 下）
-          echo "查找Linux静态构建产物..."
-          if [ -f "src-tauri/machine-code-tool-kylin-static" ]; then
-            echo "📦 复制静态链接版本..."
-            cp src-tauri/machine-code-tool-kylin-static upload/${{ matrix.asset_name }}-static
+          # Linux: 复制构建版本（产物在 src-tauri/ 下，动态链接需系统安装 WebKitGTK）
+          echo "查找 Linux 构建产物..."
+          if [ -f "src-tauri/machine-code-tool-kylin" ]; then
+            echo "📦 复制麒麟/Linux 版本..."
+            cp src-tauri/machine-code-tool-kylin upload/${{ matrix.asset_name }}
             cp src-tauri/使用说明.txt upload/使用说明.txt
-            chmod +x upload/${{ matrix.asset_name }}-static
-            echo "✅ Linux静态版本已准备完成（无任何依赖）"
+            chmod +x upload/${{ matrix.asset_name }}
+            echo "✅ Linux 版本已准备（使用前请按说明安装 libwebkit2gtk-4.1 等依赖）"
           elif [ -f "src-tauri/target/release/machine-code-tool" ]; then
             echo "📦 使用 target 产物复制..."
             cp src-tauri/target/release/machine-code-tool upload/${{ matrix.asset_name }}
@@ -236,13 +237,14 @@ jobs:
             echo "🐧 机器码获取工具 - 银河麒麟/Linux版" > upload/使用说明.txt
             echo "=======================================" >> upload/使用说明.txt
             echo "" >> upload/使用说明.txt
-            echo "💻 使用方法：运行 ${{ matrix.asset_name }} 即可" >> upload/使用说明.txt
+            echo "⚠️ 运行前请安装依赖: sudo apt install -y libwebkit2gtk-4.1-0 libgtk-3-0 libssl3" >> upload/使用说明.txt
+            echo "💻 使用方法：运行 ./${{ matrix.asset_name }}" >> upload/使用说明.txt
             echo "✨ 功能：获取机器硬件信息，提供投标API服务" >> upload/使用说明.txt
             echo "📝 版本：2.1.0" >> upload/使用说明.txt
-            echo "✅ Linux版本已准备完成"
+            echo "✅ Linux 版本已准备完成"
           else
-            echo "❌ 未找到静态构建产物"
-            echo "已检查: src-tauri/machine-code-tool-kylin-static, src-tauri/target/release/machine-code-tool"
+            echo "❌ 未找到 Linux 构建产物"
+            echo "已检查: src-tauri/machine-code-tool-kylin, src-tauri/target/release/machine-code-tool"
             find . -name "machine-code-tool*" -type f 2>/dev/null || true
             exit 1
           fi
