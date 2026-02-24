@@ -7,6 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # PPA: libsoup3、GTK4（20.04 默认无）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common ca-certificates \
+    && add-apt-repository -y ppa:ubuntu-toolchain-r/ppa \
     && add-apt-repository -y ppa:savoury1/backports \
     && add-apt-repository -y ppa:savoury1/display \
     && add-apt-repository -y ppa:savoury1/gtk4 \
@@ -23,13 +24,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgcrypt20-dev libgpg-error-dev libtasn1-dev \
     libsoup-3.0-dev libgtk-4-dev \
     libx11-dev libwayland-dev wayland-protocols \
-    imagemagick gcc-10 g++-10 clang-10 ruby unifdef gperf bison flex gettext \
+    imagemagick gcc-11 g++-11 ruby unifdef gperf bison flex gettext \
     && rm -rf /var/lib/apt/lists/*
 
 # libsoup3 已通过 PPA 安装，无需从源码编译
 
-# WebKit 2.44 的 CMake 会检测 -Qunused-arguments 等，这些是 Clang 选项，GCC 不支持，故用 Clang 构建
-ENV CC=clang-10 CXX=clang++-10
+# WebKit 2.44 需要 C++20，Clang 10 会报 ButterflyArray/PolymorphicCallStubRoutine 等错误，改用 GCC 11（不升级 glibc）
+ENV CC=gcc-11 CXX=g++-11
 
 # WebKit 的 pthread 检测错误使用 -lpthreads，Linux 上实际为 libpthread.so，提供兼容符号链接
 RUN set -e; \
