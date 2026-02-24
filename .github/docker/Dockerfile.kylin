@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsoup-3.0-dev \
     imagemagick \
     gcc-10 g++-10 \
+    ruby \
     && rm -rf /var/lib/apt/lists/*
 
 # libsoup3 已通过 PPA 安装，无需从源码编译
