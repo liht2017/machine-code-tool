@@ -4,8 +4,13 @@ FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # 系统依赖（不含 webkit2gtk-4.1，20.04 无此包）
+# 使用 PPA 安装 libsoup3，避免从源码编译（PPA: savoury1/backports 提供 20.04 的 libsoup-3.0）
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential cmake ninja-build pkg-config curl ca-certificates \
+    software-properties-common ca-certificates \
+    && add-apt-repository -y ppa:savoury1/backports \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+    build-essential cmake ninja-build pkg-config curl \
     python3 python3-pip python3-setuptools \
     libglib2.0-dev libxml2-dev libxslt1-dev libgtk-3-dev libsqlite3-dev \
     libjpeg-dev libpng-dev libwebp-dev libharfbuzz-dev libicu-dev \
@@ -13,28 +18,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libepoxy-dev libegl1-mesa-dev libgirepository1.0-dev \
     libssl-dev libfuse2 file libayatana-appindicator3-dev librsvg2-dev \
     libpsl-dev libnghttp2-dev libbrotli-dev \
+    libsoup-3.0-dev \
     imagemagick \
     && rm -rf /var/lib/apt/lists/*
 
-# 使用较新 Meson 构建 libsoup（20.04 自带 0.53，libsoup 3.2 需要更新）
-RUN pip3 install --user 'meson>=0.59'
-ENV PATH="/root/.local/bin:$PATH"
+# libsoup3 已通过 PPA 安装，无需从源码编译
 
-# 构建并安装 libsoup3（20.04 仅有 libsoup2，WebKit 4.1 需要 soup3；需 libpsl、nghttp2、brotli）
-ARG LIBSOUP_VERSION=3.2.2
-RUN cd /tmp \
-    && echo "=== Download libsoup ${LIBSOUP_VERSION} ===" \
-    && curl -fsSL "https://download.gnome.org/sources/libsoup/3.2/libsoup-${LIBSOUP_VERSION}.tar.xz" -o libsoup.tar.xz \
-    && tar xf libsoup.tar.xz && cd libsoup-${LIBSOUP_VERSION} \
-    && echo "=== Meson configure ===" \
-    && ( meson setup build --prefix=/usr/local -Dbuildtype=release -Dgssapi=disabled -Dsysprof=disabled -Ddocs=disabled -Dwrap_mode=nofallback -Dtests=false \
-        || ( echo ">>> Meson failed, last 80 lines of meson log:"; tail -80 build/meson-logs/meson-log.txt 2>/dev/null || true; exit 1 ) ) \
-    && echo "=== Ninja build ===" \
-    && ninja -C build \
-    && ninja -C build install \
-    && cd /tmp && rm -rf libsoup*
-
-# 构建并安装 WebKit2GTK（4.1 API，依赖 glibc 2.31）
+# 构建并安装 WebKit2GTK（4.1 API，依赖 glibc 2.31；需系统已装 libsoup-3.0）
 ARG WEBKIT_VERSION=2.44.0
 RUN cd /tmp \
     && curl -sSL "https://webkitgtk.org/releases/webkitgtk-${WEBKIT_VERSION}.tar.xz" -o webkit.tar.xz \
