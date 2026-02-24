@@ -55,6 +55,7 @@ RUN bash -c 'set -e; v='"${WEBKIT_VERSION}"'; \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DENABLE_MINIBROWSER=OFF -DENABLE_GLES2=OFF -GNinja \
         -DCMAKE_THREAD_LIBS_INIT="-lpthread" \
+        -DCMAKE_EXE_LINKER_FLAGS="-lpthread" \
         || ( echo ">>> CMake failed. CMakeError.log:"; cat CMakeFiles/CMakeError.log 2>/dev/null || true; exit 1 ) ) \
     && ninja -j2 2>&1 | tee /tmp/webkit_ninja.log; \
     nret=${PIPESTATUS[0]}; [ $nret -eq 0 ] || { echo ">>> Ninja failed, last 150 lines:"; tail -150 /tmp/webkit_ninja.log; exit 1; } \
