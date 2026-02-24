@@ -24,8 +24,18 @@
 
 ### 银河麒麟 / Linux
 - 银河麒麟桌面操作系统 V10 及以上版本，支持 x86_64 架构
-- **AppImage 需系统 glibc ≥ 2.35**（在 Ubuntu 22.04 环境构建）。若运行时报 `GLIBC_2.xx not found`，说明当前系统 glibc 过旧，请升级系统或使用 glibc 2.35+ 的 Linux 设备
+- **AppImage 需系统 glibc ≥ 2.35**（在 Ubuntu 22.04 环境构建）。若运行时报 `GLIBC_2.xx not found`，说明当前系统 glibc 过旧（如麒麟 V10 常见为 glibc 2.31），见下方「适配 glibc 2.31 的麒麟」。
 - 便携版为单文件 AppImage，无需单独安装依赖库
+
+#### 适配 glibc 2.31 的麒麟（如 ldd 显示 GLIBC 2.31）
+当前发布的 AppImage 在 Ubuntu 22.04 下构建，无法在 glibc 2.31 上直接运行。可选方案：
+
+| 方案 | 说明 |
+|------|------|
+| **系统升级** | 若麒麟/系统提供 glibc 2.35+ 的升级或新版本，升级后即可运行现有 AppImage。 |
+| **换设备** | 在 glibc 2.35+ 的 Linux、或 Windows/macOS 上使用本工具。 |
+| **自行构建** | 在 **Ubuntu 20.04 或 glibc 2.31 环境**（如麒麟）上从源码编译 WebKit2GTK 4.1，再执行 `cargo tauri build` 生成 AppImage。Tauri 2 依赖 WebKit2GTK 4.1，官方包仅 22.04+ 提供，故需自编 WebKit。参考 [WebKit GTK 构建说明](https://trac.webkit.org/wiki/BuildingGtk)，构建较耗时且需较多磁盘空间。 |
+| **CI 构建麒麟版** | 本仓库提供 **Actions 工作流「构建麒麟版 AppImage (glibc 2.31)」**（仅手动触发）：在 Ubuntu 20.04 Docker 中自编 WebKit2GTK 4.1 后打 AppImage，产物可在 glibc 2.31 的麒麟上直接运行。GitHub → Actions → 选择该 workflow → Run workflow。首轮约 1～2 小时，后续有缓存会快很多。 |
 
 ## 下载和安装
 
