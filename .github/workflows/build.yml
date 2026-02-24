@@ -221,17 +221,29 @@ jobs:
       run: |
         mkdir -p upload
         if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          # Linux: 复制静态构建版本
+          # Linux: 复制静态构建版本（产物在 src-tauri/ 下）
           echo "查找Linux静态构建产物..."
-          
-          if [ -f "machine-code-tool-kylin-static" ]; then
+          if [ -f "src-tauri/machine-code-tool-kylin-static" ]; then
             echo "📦 复制静态链接版本..."
-            cp machine-code-tool-kylin-static upload/${{ matrix.asset_name }}-static
-            cp 使用说明.txt upload/使用说明.txt
+            cp src-tauri/machine-code-tool-kylin-static upload/${{ matrix.asset_name }}-static
+            cp src-tauri/使用说明.txt upload/使用说明.txt
             chmod +x upload/${{ matrix.asset_name }}-static
             echo "✅ Linux静态版本已准备完成（无任何依赖）"
+          elif [ -f "src-tauri/target/release/machine-code-tool" ]; then
+            echo "📦 使用 target 产物复制..."
+            cp src-tauri/target/release/machine-code-tool upload/${{ matrix.asset_name }}
+            chmod +x upload/${{ matrix.asset_name }}
+            echo "🐧 机器码获取工具 - 银河麒麟/Linux版" > upload/使用说明.txt
+            echo "=======================================" >> upload/使用说明.txt
+            echo "" >> upload/使用说明.txt
+            echo "💻 使用方法：运行 ${{ matrix.asset_name }} 即可" >> upload/使用说明.txt
+            echo "✨ 功能：获取机器硬件信息，提供投标API服务" >> upload/使用说明.txt
+            echo "📝 版本：2.1.0" >> upload/使用说明.txt
+            echo "✅ Linux版本已准备完成"
           else
             echo "❌ 未找到静态构建产物"
+            echo "已检查: src-tauri/machine-code-tool-kylin-static, src-tauri/target/release/machine-code-tool"
+            find . -name "machine-code-tool*" -type f 2>/dev/null || true
             exit 1
           fi
         elif [ "${{ matrix.os }}" = "macos-latest" ]; then
