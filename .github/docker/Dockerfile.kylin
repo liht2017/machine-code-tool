@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libepoxy-dev libegl1-mesa-dev libgirepository1.0-dev \
     libssl-dev libfuse2 file libayatana-appindicator3-dev librsvg2-dev \
     libpsl-dev libnghttp2-dev libbrotli-dev \
+    libgcrypt20-dev libgpg-error-dev \
     libsoup-3.0-dev \
     imagemagick \
     gcc-10 g++-10 clang-10 \
