@@ -45,6 +45,12 @@ ARG WEBKIT_VERSION=2.44.0
 RUN bash -c 'set -e; v='"${WEBKIT_VERSION}"'; \
     cd /tmp && curl -sSL "https://webkitgtk.org/releases/webkitgtk-${v}.tar.xz" -o webkit.tar.xz \
     && tar xf webkit.tar.xz && cd webkitgtk-${v} \
+    && ( test -f Source/WebCore/dom/FullscreenManager.h && sed -i "/^class FullscreenManager/i\\
+#if !ENABLE(VIDEO)\\
+namespace HTMLMediaElementEnums {\\
+enum VideoFullscreenMode { VideoFullscreenModeStandard };\\
+}\\
+#endif" Source/WebCore/dom/FullscreenManager.h || true ) \
     && mkdir build && cd build \
     && printf "%s\n" \
     "set(HAVE_STAT_BIRTHTIME_value 0 CACHE INTERNAL \"\" FORCE)" \
