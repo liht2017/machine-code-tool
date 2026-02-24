@@ -125,6 +125,11 @@ jobs:
           echo 'if [ ! -f "icons/256x256.png" ]; then echo "❌ 需要 icons/512x512.png 或 icons/icon.png 以生成 256x256"; exit 1; fi' >> ubuntu-appimage-build.sh
           echo 'identify icons/256x256.png 2>/dev/null || true' >> ubuntu-appimage-build.sh
           echo '' >> ubuntu-appimage-build.sh
+          echo '# 将 tauri.conf.json 中 icons/ 改为绝对路径，避免 bundler 在容器内解析相对路径失败' >> ubuntu-appimage-build.sh
+          echo 'cp tauri.conf.json tauri.conf.json.bak' >> ubuntu-appimage-build.sh
+          echo 'sed -i '\''s|"icons/|"/workspace/icons/|g'\'' tauri.conf.json' >> ubuntu-appimage-build.sh
+          echo 'grep "icon" tauri.conf.json | head -3' >> ubuntu-appimage-build.sh
+          echo '' >> ubuntu-appimage-build.sh
           echo 'echo "🎨 创建前端资源（frontendDist 为 ../dist）..."' >> ubuntu-appimage-build.sh
           echo 'mkdir -p /dist' >> ubuntu-appimage-build.sh
           echo 'echo "<!DOCTYPE html><html><head><title>机器码获取工具</title></head><body><h1>机器码获取工具</h1></body></html>" > /dist/index.html' >> ubuntu-appimage-build.sh
@@ -140,6 +145,7 @@ jobs:
           echo 'else' >> ubuntu-appimage-build.sh
           echo '    echo "❌ 未找到 bundle/appimage 目录"; exit 1' >> ubuntu-appimage-build.sh
           echo 'fi' >> ubuntu-appimage-build.sh
+          echo 'mv tauri.conf.json.bak tauri.conf.json 2>/dev/null || true' >> ubuntu-appimage-build.sh
 
           chmod +x ubuntu-appimage-build.sh
           
