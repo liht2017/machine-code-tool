@@ -31,9 +31,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV CC=clang-10 CXX=clang++-10
 
 # WebKit 的 pthread 检测错误使用 -lpthreads，Linux 上实际为 libpthread.so，提供兼容符号链接
-RUN for d in /usr/lib/*-linux-gnu; do \
-    [ -f "$$d/libpthread.so.0" ] && ln -sf libpthread.so.0 "$$d/libpthreads.so" && break; \
-    done
+RUN set -e; \
+    if [ -f /usr/lib/x86_64-linux-gnu/libpthread.so.0 ]; then \
+        ln -sf libpthread.so.0 /usr/lib/x86_64-linux-gnu/libpthreads.so; \
+    elif [ -f /usr/lib/aarch64-linux-gnu/libpthread.so.0 ]; then \
+        ln -sf libpthread.so.0 /usr/lib/aarch64-linux-gnu/libpthreads.so; \
+    fi
 
 # 构建并安装 WebKit2GTK（4.1 API，依赖 glibc 2.31）
 ARG WEBKIT_VERSION=2.44.0
@@ -58,8 +61,8 @@ RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
     && . /root/.cargo/env && cargo install tauri-cli --locked
 
 ENV PATH="/root/.cargo/bin:$PATH" \
-    PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" \
-    LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
+    PKG_CONFIG_PATH="/usr/local/lib/pkgconfig" \
+    LD_LIBRARY_PATH="/usr/local/lib"
 
 WORKDIR /workspace
 CMD ["bash"]
