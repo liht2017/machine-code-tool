@@ -20,14 +20,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpsl-dev libnghttp2-dev libbrotli-dev \
     libsoup-3.0-dev \
     imagemagick \
-    gcc-10 g++-10 \
+    gcc-10 g++-10 clang-10 \
     ruby \
     && rm -rf /var/lib/apt/lists/*
 
 # libsoup3 已通过 PPA 安装，无需从源码编译
 
-# WebKit 需 GCC 10.2+，全局指定以便 cmake/ninja 均使用
-ENV CC=gcc-10 CXX=g++-10
+# WebKit 2.44 的 CMake 会检测 -Qunused-arguments 等，这些是 Clang 选项，GCC 不支持，故用 Clang 构建
+ENV CC=clang-10 CXX=clang++-10
 
 # 构建并安装 WebKit2GTK（4.1 API，依赖 glibc 2.31）
 ARG WEBKIT_VERSION=2.44.0
