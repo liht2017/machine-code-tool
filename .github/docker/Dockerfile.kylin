@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgcrypt20-dev libgpg-error-dev libtasn1-dev \
     libsoup-3.0-dev libgtk-4-dev \
     libx11-dev libwayland-dev wayland-protocols \
-    imagemagick gcc-10 g++-10 clang-10 ruby unifdef \
+    imagemagick gcc-10 g++-10 clang-10 ruby unifdef gperf bison flex \
     && rm -rf /var/lib/apt/lists/*
 
 # libsoup3 已通过 PPA 安装，无需从源码编译
