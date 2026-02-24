@@ -44,7 +44,12 @@ RUN bash -c 'set -e; v='"${WEBKIT_VERSION}"'; \
     cd /tmp && curl -sSL "https://webkitgtk.org/releases/webkitgtk-${v}.tar.xz" -o webkit.tar.xz \
     && tar xf webkit.tar.xz && cd webkitgtk-${v} \
     && mkdir build && cd build \
-    && echo "set(HAVE_STAT_BIRTHTIME_value 0 CACHE INTERNAL \"\" FORCE)" > /tmp/webkit_fix.cmake \
+    && printf "%s\n" \
+    "set(HAVE_STAT_BIRTHTIME_value 0 CACHE INTERNAL \"\" FORCE)" \
+    "set(HAVE_PTHREAD_NP_H 0 CACHE INTERNAL \"\" FORCE)" \
+    "set(HAVE__ALIGNED_MALLOC 0 CACHE INTERNAL \"\" FORCE)" \
+    "set(HAVE_STRNSTR 0 CACHE INTERNAL \"\" FORCE)" \
+    > /tmp/webkit_fix.cmake \
     && export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH \
     && ( cmake -C /tmp/webkit_fix.cmake .. -DPORT=GTK -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
