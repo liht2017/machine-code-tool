@@ -103,7 +103,7 @@ chmod +x build.sh
 
 3. 构建完成后，安装包位于 `release/` 目录
    - macOS: `machine-code-tool-macos.dmg`
-   - Linux: `machine-code-tool-kylin.deb`
+   - Linux: `machine-code-tool-kylin.AppImage`（单文件自带依赖，下载即用、无需安装）
 
 ## 详细构建步骤
 
@@ -142,7 +142,7 @@ cargo tauri build
 # 安装包位于：
 # Windows: src-tauri/target/release/bundle/msi/ 或 bundle/nsis/
 # macOS: src-tauri/target/release/bundle/dmg/
-# Linux: src-tauri/target/release/bundle/deb/ 或 bundle/rpm/
+# Linux: src-tauri/target/release/bundle/appimage/*.AppImage（推荐，免安装依赖）
 
 # 可执行文件位于：
 # src-tauri/target/release/machine-code-tool(.exe)
