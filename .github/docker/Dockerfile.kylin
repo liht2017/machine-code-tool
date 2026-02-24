@@ -7,7 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # PPA: libsoup3、GTK4（20.04 默认无）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common ca-certificates \
-    && add-apt-repository -y ppa:ubuntu-toolchain-r/ppa \
+    && add-apt-repository -y ppa:savoury1/gcc-defaults-11 \
     && add-apt-repository -y ppa:savoury1/backports \
     && add-apt-repository -y ppa:savoury1/display \
     && add-apt-repository -y ppa:savoury1/gtk4 \
