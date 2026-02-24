@@ -1,0 +1,33 @@
+--- a/Source/WebCore/Modules/WebGPU/GPUDevice.cpp
++++ b/Source/WebCore/Modules/WebGPU/GPUDevice.cpp
+@@ -261,7 +261,11 @@
+ }
+ 
+ GPUExternalTexture* GPUDevice::externalTextureForDescriptor(const GPUExternalTextureDescriptor& descriptor)
+ {
++#if !ENABLE(VIDEO)
++    return nullptr;
++#else
+  m_videoElementToExternalTextureMap.removeNullReferences();
+ #if ENABLE(WEB_CODECS)
+     if (auto* videoElement = std::get_if<RefPtr<HTMLVideoElement>>(&descriptor.source)) {
+@@ -274,6 +278,7 @@ GPUExternalTexture* GPUDevice::externalTextureForDescriptor(const GPUExternalTextureDescriptor& descriptor)
+  return it->value.get();
+  }
+  return nullptr;
++#endif
+ }
+ 
++#if ENABLE(VIDEO)
+ class GPUDeviceVideoFrameRequestCallback final : public VideoFrameRequestCallback {
+ public:
+     CallbackResult handleEvent(double, const VideoFrameMetadata&) override
+@@ -300,6 +305,7 @@ private:
+     Ref<GPUExternalTexture> m_externalTexture;
+     HTMLVideoElement& m_videoElement;
+     WeakHashMap<HTMLVideoElement, WeakPtr<GPUExternalTexture>, WeakPtrImplWithEventTargetData> &m_weakMap;
+ };
++#endif
+ 
+ Ref<GPUExternalTexture> GPUDevice::importExternalTexture(const GPUExternalTextureDescriptor& externalTextureDescriptor)
+ {
