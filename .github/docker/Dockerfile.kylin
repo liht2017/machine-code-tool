@@ -22,13 +22,16 @@ ENV PATH="/root/.local/bin:$PATH"
 
 # 构建并安装 libsoup3（20.04 仅有 libsoup2，WebKit 4.1 需要 soup3；需 libpsl、nghttp2、brotli）
 ARG LIBSOUP_VERSION=3.2.2
-RUN set -e; cd /tmp \
-    && curl -sSL "https://download.gnome.org/sources/libsoup/3.2/libsoup-${LIBSOUP_VERSION}.tar.xz" -o libsoup.tar.xz \
+RUN cd /tmp \
+    && echo "=== Download libsoup ${LIBSOUP_VERSION} ===" \
+    && curl -fsSL "https://download.gnome.org/sources/libsoup/3.2/libsoup-${LIBSOUP_VERSION}.tar.xz" -o libsoup.tar.xz \
     && tar xf libsoup.tar.xz && cd libsoup-${LIBSOUP_VERSION} \
-    && ( meson setup build --prefix=/usr/local -Dbuildtype=release -Dgssapi=disabled -Dsysprof=disabled -Ddocs=disabled -Dwrap_mode=nofallback \
-        || ( echo "===== Meson log ====="; cat build/meson-logs/meson-log.txt 2>/dev/null || true; exit 1 ) ) \
-    && ( ninja -C build && ninja -C build install \
-        || ( echo "===== Ninja log ====="; ninja -C build 2>&1 | tail -100; exit 1 ) ) \
+    && echo "=== Meson configure ===" \
+    && ( meson setup build --prefix=/usr/local -Dbuildtype=release -Dgssapi=disabled -Dsysprof=disabled -Ddocs=disabled -Dwrap_mode=nofallback -Dtests=false \
+        || ( echo ">>> Meson failed, last 80 lines of meson log:"; tail -80 build/meson-logs/meson-log.txt 2>/dev/null || true; exit 1 ) ) \
+    && echo "=== Ninja build ===" \
+    && ninja -C build \
+    && ninja -C build install \
     && cd /tmp && rm -rf libsoup*
 
 # 构建并安装 WebKit2GTK（4.1 API，依赖 glibc 2.31）
