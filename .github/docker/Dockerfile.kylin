@@ -60,7 +60,7 @@ RUN bash -c 'set -e; v='"${WEBKIT_VERSION}"'; \
     && export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH \
     && ( cmake -C /tmp/webkit_fix.cmake .. -DPORT=GTK -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
-        -DENABLE_MINIBROWSER=OFF -DENABLE_GLES2=OFF -GNinja \
+        -DENABLE_MINIBROWSER=OFF -DENABLE_GLES2=OFF -DENABLE_GAMEPAD=OFF -GNinja \
         -DCMAKE_THREAD_LIBS_INIT="-lpthread" \
         -DCMAKE_EXE_LINKER_FLAGS="-lpthread -latomic" \
         || ( echo ">>> CMake failed. CMakeError.log:"; cat CMakeFiles/CMakeError.log 2>/dev/null || true; exit 1 ) ) \
