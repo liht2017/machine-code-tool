@@ -99,7 +99,8 @@ jobs:
           echo '    libayatana-appindicator3-dev \' >> ubuntu-appimage-build.sh
           echo '    librsvg2-dev \' >> ubuntu-appimage-build.sh
           echo '    libfuse2 \' >> ubuntu-appimage-build.sh
-          echo '    file' >> ubuntu-appimage-build.sh
+          echo '    file \' >> ubuntu-appimage-build.sh
+          echo '    imagemagick' >> ubuntu-appimage-build.sh
           echo '' >> ubuntu-appimage-build.sh
           echo 'echo "🦀 安装 Rust..."' >> ubuntu-appimage-build.sh
           echo 'curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable' >> ubuntu-appimage-build.sh
@@ -110,6 +111,13 @@ jobs:
           echo '' >> ubuntu-appimage-build.sh
           echo 'cd /workspace' >> ubuntu-appimage-build.sh
           echo 'echo "当前目录: $(pwd)"' >> ubuntu-appimage-build.sh
+          echo '' >> ubuntu-appimage-build.sh
+          echo '# AppImage 需要 256x256 方图标，缺失时从 512x512 或 icon.png 生成' >> ubuntu-appimage-build.sh
+          echo 'if [ ! -f "icons/256x256.png" ]; then' >> ubuntu-appimage-build.sh
+          echo '  if [ -f "icons/512x512.png" ]; then convert icons/512x512.png -resize 256x256 icons/256x256.png; echo "已从 512x512 生成 256x256 图标";' >> ubuntu-appimage-build.sh
+          echo '  elif [ -f "icons/icon.png" ]; then convert icons/icon.png -resize 256x256 icons/256x256.png; echo "已从 icon.png 生成 256x256 图标";' >> ubuntu-appimage-build.sh
+          echo '  else echo "❌ 需要 icons/256x256.png 或 icons/512x512.png 或 icons/icon.png"; exit 1; fi' >> ubuntu-appimage-build.sh
+          echo 'fi' >> ubuntu-appimage-build.sh
           echo '' >> ubuntu-appimage-build.sh
           echo 'echo "🎨 创建前端资源（frontendDist 为 ../dist）..."' >> ubuntu-appimage-build.sh
           echo 'mkdir -p /dist' >> ubuntu-appimage-build.sh
