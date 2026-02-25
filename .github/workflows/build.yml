@@ -90,14 +90,14 @@ jobs:
             echo "" >> 使用说明-麒麟-apt.txt
             echo "🎉 适用于麒麟 V10、Ubuntu 20.04 等，单文件免安装。" >> 使用说明-麒麟-apt.txt
             echo "" >> 使用说明-麒麟-apt.txt
-            echo "💻 使用步骤（优先用鼠标操作）：" >> 使用说明-麒麟-apt.txt
+            echo "💻 使用步骤：" >> 使用说明-麒麟-apt.txt
             echo "" >> 使用说明-麒麟-apt.txt
-            echo "1️⃣ 先尝试直接双击「machine-code-tool-kylin.AppImage」运行。" >> 使用说明-麒麟-apt.txt
+            echo "1、 先尝试直接双击「machine-code-tool-kylin.AppImage」运行。" >> 使用说明-麒麟-apt.txt
             echo "" >> 使用说明-麒麟-apt.txt
-            echo "2️⃣ 若无法运行或提示没有执行权限：" >> 使用说明-麒麟-apt.txt
+            echo "2、 若无法运行或提示没有执行权限：" >> 使用说明-麒麟-apt.txt
             echo "   右键点击该文件 → 选择「属性」→ 打开「权限」标签 → 勾选「允许作为程序执行」→ 关闭后双击运行。" >> 使用说明-麒麟-apt.txt
             echo "" >> 使用说明-麒麟-apt.txt
-            echo "3️⃣ 若打开时出现 AT-SPI 相关提示，可忽略不影响使用。" >> 使用说明-麒麟-apt.txt
+            echo "3、 若打开时出现 AT-SPI 相关提示，可忽略不影响使用。" >> 使用说明-麒麟-apt.txt
             echo "" >> 使用说明-麒麟-apt.txt
             echo "✨ 功能：获取机器硬件信息，提供投标API服务 | 📝 版本：2.1.0" >> 使用说明-麒麟-apt.txt
           '
@@ -235,7 +235,7 @@ jobs:
           fi
           echo "=========================" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "💻 使用步骤（全程用鼠标即可）：" >> upload/使用说明.txt
+          echo "💻 使用步骤：" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "1、 解压下载的压缩包" >> upload/使用说明.txt
           echo "   右键点击下载的 zip 文件 → 选择「解压到当前文件夹」或「全部解压」。" >> upload/使用说明.txt
@@ -256,7 +256,7 @@ jobs:
           echo "" >> upload/使用说明.txt
           echo "🎉 此版本同时支持 Intel 和 Apple Silicon 芯片！" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "💻 使用步骤（全程用鼠标即可）：" >> upload/使用说明.txt
+          echo "💻 使用步骤：" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "1、 运行程序" >> upload/使用说明.txt
           echo "   双击「${{ matrix.asset_name }}」即可打开工具。" >> upload/使用说明.txt
