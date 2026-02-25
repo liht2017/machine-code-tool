@@ -237,7 +237,7 @@ jobs:
         name: ${{ matrix.asset_name }}
         path: upload/
         retention-days: 30
-cd
+
   release:
     needs: build
     runs-on: ubuntu-latest
