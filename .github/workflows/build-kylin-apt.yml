@@ -52,7 +52,7 @@ jobs:
               echo "🎨 使用仓库完整前端（避免覆盖导致乱码与缺 UI）..."
               mkdir -p ../dist
               if [ ! -f ../dist/index.html ]; then
-                echo '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>机器码获取工具</title></head><body><h1>机器码获取工具</h1></body></html>' > ../dist/index.html
+                cp /workspace/.github/docker/kylin-fallback-index.html ../dist/index.html
               fi
               head -5 ../dist/index.html || true
               cp tauri.conf.json tauri.conf.json.bak
