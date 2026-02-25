@@ -237,15 +237,15 @@ jobs:
           echo "" >> upload/使用说明.txt
           echo "💻 使用步骤（全程用鼠标即可）：" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "1️⃣ 解压下载的压缩包" >> upload/使用说明.txt
+          echo "1、 解压下载的压缩包" >> upload/使用说明.txt
           echo "   右键点击下载的 zip 文件 → 选择「解压到当前文件夹」或「全部解压」。" >> upload/使用说明.txt
           echo "   解压后会看到「${{ matrix.asset_name }}.exe」和本说明文件。" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "2️⃣ 运行程序" >> upload/使用说明.txt
+          echo "2、 运行程序" >> upload/使用说明.txt
           echo "   双击「${{ matrix.asset_name }}.exe」即可打开工具。" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "3️⃣ 若出现「无法验证发布者」或「Windows 已保护您的电脑」" >> upload/使用说明.txt
-          echo "   本工具未购买商业签名，属于正常提示。请点击「更多信息」→ 再点击「仍要运行」即可正常使用。" >> upload/使用说明.txt
+          echo "3、 若出现「无法验证发布者」或「Windows 已保护您的电脑」" >> upload/使用说明.txt
+          echo "   属于正常提示。请点击「更多信息」→ 再点击「仍要运行」即可正常使用。" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "✨ 功能：获取机器硬件信息，提供投标API服务" >> upload/使用说明.txt
           echo "📝 版本：2.1.0" >> upload/使用说明.txt
@@ -258,10 +258,10 @@ jobs:
           echo "" >> upload/使用说明.txt
           echo "💻 使用步骤（全程用鼠标即可）：" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "1️⃣ 运行程序" >> upload/使用说明.txt
+          echo "1、 运行程序" >> upload/使用说明.txt
           echo "   双击「${{ matrix.asset_name }}」即可打开工具。" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "2️⃣ 若提示「无法打开，因为来自身份不明的开发者」，任选一种方式即可：" >> upload/使用说明.txt
+          echo "2、 若提示「无法打开，因为来自身份不明的开发者」，任选一种方式即可：" >> upload/使用说明.txt
           echo "   方式一：右键点击该文件 → 选择「打开」→ 在弹窗中再次点击「打开」。之后可直接双击运行。" >> upload/使用说明.txt
           echo "   方式二：打开「系统设置」→ 左侧点「隐私与安全」→ 在右侧「安全性」区域找到被阻止的本程序 → 点击「仍要打开」→ 在确认弹窗中再点「打开」。" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
