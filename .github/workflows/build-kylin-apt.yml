@@ -41,13 +41,12 @@ jobs:
               set -e
               cd /workspace/src-tauri
               echo "📁 当前目录: $(pwd)"
-              echo "📁 生成方形图标（AppImage 必须）..."
+              echo "📁 生成方形图标（AppImage 必须，Tauri 要求 RGBA）..."
               mkdir -p icons
               ICONS_ABS="$(pwd)/icons"
-              convert -size 32x32 xc:#4080ff -strip "$ICONS_ABS/32x32.png"
-              convert -size 128x128 xc:#4080ff -strip "$ICONS_ABS/128x128.png"
-              convert -size 256x256 xc:#4080ff -strip "$ICONS_ABS/256x256.png"
-              convert -size 512x512 xc:#4080ff -strip "$ICONS_ABS/512x512.png"
+              for s in 32 128 256 512; do
+                convert -size ${s}x${s} xc:#4080ff -alpha set -strip "$ICONS_ABS/${s}x${s}.png"
+              done
               ls -la "$ICONS_ABS"/*.png
               echo "🎨 准备前端占位..."
               mkdir -p ../dist

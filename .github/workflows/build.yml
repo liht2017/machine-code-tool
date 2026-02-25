@@ -22,6 +22,9 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             asset_name: machine-code-tool-windows
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+            asset_name: machine-code-tool-windows-32
 
     runs-on: ${{ matrix.os }}
 
@@ -56,6 +59,7 @@ jobs:
 
     - name: 构建
       run: |
+        set -e
         cd src-tauri
         echo "开始Tauri构建..."
         echo "目标平台: ${{ matrix.target }}"
@@ -126,19 +130,24 @@ jobs:
         elif [ "${{ matrix.os }}" = "macos-latest" ]; then
           echo "🍎 macOS构建：创建通用二进制文件"
           
-          # 构建两种架构
-          echo "📦 构建Apple Silicon版本..."
+          # 构建两种架构（当前目录已在 src-tauri，产物在 src-tauri/target/<triple>/release/）
+          echo "📦 构建 Apple Silicon (aarch64) 版本..."
           cargo tauri build --target aarch64-apple-darwin --bundles none --verbose
+          echo "📁 aarch64 构建产物:"
+          ls -la target/aarch64-apple-darwin/release/ 2>/dev/null || true
           
-          echo "📦 构建Intel版本..."
+          echo "📦 构建 Intel (x86_64) 版本..."
           cargo tauri build --target x86_64-apple-darwin --bundles none --verbose
+          echo "📁 x86_64 构建产物:"
+          ls -la target/x86_64-apple-darwin/release/ 2>/dev/null || true
           
-          # 创建通用二进制文件
+          A64="target/aarch64-apple-darwin/release/machine-code-tool"
+          X64="target/x86_64-apple-darwin/release/machine-code-tool"
+          [ ! -f "$A64" ] && echo "❌ 缺少 $A64" && exit 1
+          [ ! -f "$X64" ] && echo "❌ 缺少 $X64" && exit 1
+          
           echo "🔧 创建通用二进制文件..."
-          lipo -create \
-            target/aarch64-apple-darwin/release/machine-code-tool \
-            target/x86_64-apple-darwin/release/machine-code-tool \
-            -output machine-code-tool-universal
+          lipo -create "$A64" "$X64" -output machine-code-tool-universal
           
           echo "📁 验证文件位置："
           ls -la machine-code-tool-universal
@@ -190,9 +199,22 @@ jobs:
             exit 1
           fi
         elif [ "${{ matrix.os }}" = "windows-latest" ]; then
-          # Windows: 复制exe文件
-          cp src-tauri/target/${{ matrix.target }}/release/machine-code-tool.exe upload/${{ matrix.asset_name }}.exe
-          echo "✅ Windows文件已准备完成"
+          # Windows: 复制 exe（可能为 target/<triple>/release/ 或 target/release/）
+          WIN_EXE=""
+          if [ -f "src-tauri/target/${{ matrix.target }}/release/machine-code-tool.exe" ]; then
+            WIN_EXE="src-tauri/target/${{ matrix.target }}/release/machine-code-tool.exe"
+          elif [ -f "src-tauri/target/release/machine-code-tool.exe" ]; then
+            WIN_EXE="src-tauri/target/release/machine-code-tool.exe"
+          fi
+          if [ -n "$WIN_EXE" ]; then
+            cp "$WIN_EXE" upload/${{ matrix.asset_name }}.exe
+            echo "✅ Windows 文件已准备完成 (from $WIN_EXE)"
+          else
+            echo "❌ 未找到 machine-code-tool.exe"
+            echo "已检查: src-tauri/target/${{ matrix.target }}/release/ 与 src-tauri/target/release/"
+            find src-tauri/target -name "*.exe" -type f 2>/dev/null || true
+            exit 1
+          fi
         else
           echo "❌ 未知平台: ${{ matrix.os }}"
           exit 1
@@ -203,7 +225,11 @@ jobs:
     - name: 生成平台说明文件
       run: |
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          echo "🚀 机器码获取工具 - Windows版" > upload/使用说明.txt
+          if [ "${{ matrix.asset_name }}" = "machine-code-tool-windows-32" ]; then
+            echo "🚀 机器码获取工具 - Windows版(32位)" > upload/使用说明.txt
+          else
+            echo "🚀 机器码获取工具 - Windows版(64位)" > upload/使用说明.txt
+          fi
           echo "=========================" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "💻 使用方法：" >> upload/使用说明.txt
@@ -273,7 +299,7 @@ jobs:
           ## 🎉 机器码获取工具 v2.1.0
           
           ### 📦 下载说明
-          - **Windows用户**：下载 `machine-code-tool-windows.zip`
+          - **Windows用户**：64位下载 `machine-code-tool-windows.zip`，32位下载 `machine-code-tool-windows-32.zip`
           - **macOS用户**：下载 `machine-code-tool-macos.zip`（通用版本，支持Intel和Apple Silicon）
           - **银河麒麟/Linux用户**：下载 `machine-code-tool-kylin.zip`（内为 AppImage，单文件自带依赖，下载即用、无需安装）
           
