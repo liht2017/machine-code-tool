@@ -12,8 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     imagemagick \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
-    && [ -f /root/.cargo/env ] && . /root/.cargo/env && cargo install tauri-cli --version "1.5.9"
+# tauri-cli 1.5.9 与当前最新 Rust 不兼容，需用 1.65 工具链编译
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.65.0 \
+    && [ -f /root/.cargo/env ] && . /root/.cargo/env \
+    && cargo install tauri-cli --version "1.5.9" \
+    && rustup default stable
 
 ENV PATH="/root/.cargo/bin:$PATH"
 
