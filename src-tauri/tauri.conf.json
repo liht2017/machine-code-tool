@@ -50,7 +50,7 @@
         "width": 790,
         "height": 490,
         "resizable": false,
-        "fullscreen": false,
+        "fullscreen": true,
         "center": true,
         "decorations": true
       }
