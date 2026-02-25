@@ -133,36 +133,29 @@ async fn toggle_devtools(_window: tauri::Window) -> Result<(), String> {
 
 #[tauri::command]
 async fn fetch_remote_content(url: String) -> Result<serde_json::Value, String> {
-    use reqwest;
-    
-    match reqwest::Client::new()
-        .post(&url)
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .header("User-Agent", "Machine-Code-Tool/2.1.0")
+    let client = reqwest::Client::builder()
+        .user_agent("Machine-Code-Tool/2.1.0")
+        .build()
+        .map_err(|e| format!("创建HTTP客户端失败: {}", e))?;
+    // findConfByKey 类接口一般为 GET
+    let response = client
+        .get(&url)
         .send()
         .await
-    {
-        Ok(response) => {
-            if response.status().is_success() {
-                match response.text().await {
-                    Ok(text) => {
-                        match serde_json::from_str::<serde_json::Value>(&text) {
-                            Ok(json) => Ok(json),
-                            Err(_) => Ok(serde_json::json!({
-                                "success": false,
-                                "error": "JSON解析失败",
-                                "raw_response": text
-                            }))
-                        }
-                    }
-                    Err(e) => Err(format!("读取响应内容失败: {}", e))
-                }
-            } else {
-                Err(format!("HTTP请求失败: {} {}", response.status(), response.status().canonical_reason().unwrap_or("Unknown")))
-            }
-        }
-        Err(e) => Err(format!("网络请求失败: {}", e))
+        .map_err(|e| format!("网络请求失败: {}", e))?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "HTTP {} {}",
+            response.status().as_u16(),
+            response.status().canonical_reason().unwrap_or("Unknown")
+        ));
     }
+    let text = response
+        .text()
+        .await
+        .map_err(|e| format!("读取响应失败: {}", e))?;
+    serde_json::from_str::<serde_json::Value>(&text)
+        .map_err(|e| format!("JSON解析失败: {}", e))
 }
 
 // HTTP服务器相关函数

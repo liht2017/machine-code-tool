@@ -334,9 +334,16 @@
             originalConsoleLog.apply(console, args);
         };
 
+        function getTauriInvoke() {
+            if (!window.__TAURI__) return null;
+            if (window.__TAURI__.core && window.__TAURI__.core.invoke) return window.__TAURI__.core.invoke;
+            if (window.__TAURI__.tauri && window.__TAURI__.tauri.invoke) return window.__TAURI__.tauri.invoke;
+            if (window.__TAURI__.invoke) return window.__TAURI__.invoke;
+            return null;
+        }
         async function waitForTauriAPI(maxAttempts = 50, interval = 100) {
             for (let i = 0; i < maxAttempts; i++) {
-                if (window.__TAURI__) {
+                if (getTauriInvoke()) {
                     console.log(`Tauri API在第${i + 1}次尝试后可用`);
                     return true;
                 }
@@ -348,15 +355,8 @@
 
         async function initializeApp() {
             console.log('初始化应用...');
-            
-            // 初始化Tauri API引用
-            if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
-                tauriInvoke = window.__TAURI__.core.invoke;
-                console.log('使用Tauri 2.x API (window.__TAURI__.core.invoke)');
-            } else if (window.__TAURI__ && window.__TAURI__.invoke) {
-                tauriInvoke = window.__TAURI__.invoke;
-                console.log('使用Tauri 1.x API (window.__TAURI__.invoke)');
-            } else {
+            tauriInvoke = getTauriInvoke();
+            if (!tauriInvoke) {
                 console.error('初始化时Tauri API仍不可用');
                 console.log('可用的API:', window.__TAURI__ ? Object.keys(window.__TAURI__) : 'window.__TAURI__ 不存在');
                 handleNonTauriEnvironment();
@@ -491,8 +491,16 @@
             }
         }
 
+        function extractContent(result) {
+            if (!result || typeof result !== 'object') return null;
+            if (result.v != null && typeof result.v === 'string') return result.v;
+            if (result.data && result.data.v != null) return result.data.v;
+            if (result.value != null && typeof result.value === 'string') return result.value;
+            if (typeof result === 'string') return result;
+            return null;
+        }
+
         async function openUserAgreement() {
-            // 直接使用后端代理请求
             if (tauriInvoke) {
                 console.log('正在通过后端获取用户协议...');
                 try {
@@ -500,25 +508,22 @@
                         url: 'https://zcpt.xysstgs.com/base/sys/setting/findConfByKey?key=hardware_information_tool_user_agreement'
                     });
                     console.log('后端获取用户协议成功:', result);
-                    if (result && result.v) {
-                        console.log('使用在线用户协议');
-                        showCustomDialog('用户协议', result.v);
+                    const content = extractContent(result);
+                    if (content) {
+                        showCustomDialog('用户协议', content);
                         return;
                     }
                 } catch (error) {
                     console.log('后端获取用户协议失败:', error);
+                    const errMsg = (error && (error.message || error.toString())) ? (error.message || error.toString()) : '未知错误';
+                    showCustomDialog('用户协议', '无法加载在线内容：' + errMsg + '\n\n请检查网络连接后重试。');
+                    return;
                 }
             }
-            
-            // 本地备用版本
-            const userAgreementText = `本地默认用户协议`;
-            
-            console.log('使用本地用户协议版本');
-            showCustomDialog('用户协议', userAgreementText);
+            showCustomDialog('用户协议', '本地默认用户协议');
         }
 
         async function openPrivacyPolicy() {
-            // 直接使用后端代理请求
             if (tauriInvoke) {
                 console.log('正在通过后端获取隐私策略...');
                 try {
@@ -526,21 +531,19 @@
                         url: 'https://zcpt.xysstgs.com/base/sys/setting/findConfByKey?key=hardware_information_tool_privacy_policy'
                     });
                     console.log('后端获取隐私策略成功:', result);
-                    if (result && result.v) {
-                        console.log('使用在线隐私策略');
-                        showCustomDialog('隐私策略', result.v);
+                    const content = extractContent(result);
+                    if (content) {
+                        showCustomDialog('隐私策略', content);
                         return;
                     }
                 } catch (error) {
                     console.log('后端获取隐私策略失败:', error);
+                    const errMsg = (error && (error.message || error.toString())) ? (error.message || error.toString()) : '未知错误';
+                    showCustomDialog('隐私策略', '无法加载在线内容：' + errMsg + '\n\n请检查网络连接后重试。');
+                    return;
                 }
             }
-            
-            // 本地备用版本
-            const privacyPolicyText = `本地默认隐私策略`;
-            
-            console.log('使用本地隐私策略版本');
-            showCustomDialog('隐私策略', privacyPolicyText);
+            showCustomDialog('隐私策略', '本地默认隐私策略');
         }
 
         function checkUpdate() {
@@ -587,8 +590,10 @@
         // 添加快捷键开启开发者工具 (F12 或 Ctrl+Shift+I)
         document.addEventListener('keydown', function(e) {
             if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
-                if (window.__TAURI__ && window.__TAURI__.core) {
+                if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
                     window.__TAURI__.core.invoke('toggle_devtools');
+                } else if (window.__TAURI__ && window.__TAURI__.tauri && window.__TAURI__.tauri.invoke) {
+                    window.__TAURI__.tauri.invoke('toggle_devtools');
                 } else if (window.__TAURI__ && window.__TAURI__.invoke) {
                     window.__TAURI__.invoke('toggle_devtools');
                 }

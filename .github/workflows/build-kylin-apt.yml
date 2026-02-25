@@ -49,9 +49,12 @@ jobs:
               done
               identify -verbose "$ICONS_ABS/32x32.png" | grep -E "Type|Channel|Depth|Colorspace" || true
               ls -la "$ICONS_ABS"/*.png
-              echo "🎨 准备前端占位..."
+              echo "🎨 使用仓库完整前端（避免覆盖导致乱码与缺 UI）..."
               mkdir -p ../dist
-              echo "<!DOCTYPE html><html><head><title>机器码获取工具</title></head><body><h1>机器码获取工具</h1></body></html>" > ../dist/index.html
+              if [ ! -f ../dist/index.html ]; then
+                echo '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>机器码获取工具</title></head><body><h1>机器码获取工具</h1></body></html>' > ../dist/index.html
+              fi
+              head -5 ../dist/index.html || true
               cp tauri.conf.json tauri.conf.json.bak
               sed -i "s/\"productName\":\"机器码获取工具\"/\"productName\":\"machine-code-tool\"/" tauri.conf.json
               echo "🚀 构建 AppImage（容器为 Ubuntu 20.04，glibc 2.31）..."
@@ -68,6 +71,10 @@ jobs:
               echo "   若目标机未装 WebKit，请执行：sudo apt install libwebkit2gtk-4.0-37（或 libwebkit2gtk-4.0）" >> 使用说明-麒麟-apt.txt
               echo "" >> 使用说明-麒麟-apt.txt
               echo "💻 使用：chmod +x machine-code-tool-kylin-apt.AppImage 后双击或 ./machine-code-tool-kylin-apt.AppImage" >> 使用说明-麒麟-apt.txt
+              echo "" >> 使用说明-麒麟-apt.txt
+              echo "⚠️ 若终端出现 AT-SPI/accessibility bus 警告，可忽略或加环境变量运行以屏蔽：" >> 使用说明-麒麟-apt.txt
+              echo "   NO_AT_BRIDGE=1 ./machine-code-tool-kylin-apt.AppImage" >> 使用说明-麒麟-apt.txt
+              echo "" >> 使用说明-麒麟-apt.txt
               echo "✨ 功能：机器硬件信息、投标API服务 | 版本：2.1.0" >> 使用说明-麒麟-apt.txt
             '
           ls -la "$PROJ/src-tauri/machine-code-tool-kylin-apt.AppImage" "$PROJ/src-tauri/使用说明-麒麟-apt.txt"
