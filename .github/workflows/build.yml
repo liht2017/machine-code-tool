@@ -128,10 +128,10 @@ jobs:
           
           # 构建两种架构
           echo "📦 构建Apple Silicon版本..."
-          cargo tauri build --target aarch64-apple-darwin --no-bundle --verbose
+          cargo tauri build --target aarch64-apple-darwin --bundles none --verbose
           
           echo "📦 构建Intel版本..."
-          cargo tauri build --target x86_64-apple-darwin --no-bundle --verbose
+          cargo tauri build --target x86_64-apple-darwin --bundles none --verbose
           
           # 创建通用二进制文件
           echo "🔧 创建通用二进制文件..."
@@ -151,7 +151,7 @@ jobs:
           echo "✅ macOS通用版本创建完成"
         else
           echo "🚀 Windows构建"
-          cargo tauri build --target ${{ matrix.target }} --no-bundle --verbose
+          cargo tauri build --target ${{ matrix.target }} --bundles none --verbose
           
           # 显示构建产物
           echo "📋 构建产物:"

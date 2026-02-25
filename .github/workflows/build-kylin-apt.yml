@@ -1,5 +1,4 @@
-# 麒麟版快速构建：Tauri v1 + 系统 WebKit2GTK 4.0，直接在 runner 上构建（不用容器，避免图标路径问题）。
-# 目标机需安装 libwebkit2gtk-4.0。注：runner 为 ubuntu-22.04，二进制依赖 glibc 2.35+；若需 glibc 2.31 兼容请用 build-kylin-glibc231（Docker 20.04）。
+# 麒麟版快速构建：Tauri v1 + 系统 WebKit2GTK 4.0，在 Ubuntu 20.04 下构建，产出的 AppImage 可在 glibc 2.31 环境（麒麟 V10、Ubuntu 20.04 等）运行。
 name: 构建麒麟版 AppImage（Tauri v1 + apt，无容器）
 
 on:
@@ -7,7 +6,7 @@ on:
 
 jobs:
   build-kylin-apt:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     timeout-minutes: 45
 
     steps:
@@ -22,7 +21,7 @@ jobs:
             echo "dir=." >> $GITHUB_OUTPUT
           fi
 
-      - name: 安装 Linux 构建依赖（WebKit2GTK，22.04 为 4.0）
+      - name: 安装 Linux 构建依赖（WebKit2GTK 4.0，20.04 含 glibc 2.31）
         run: |
           sudo sed -i '/^#\s*deb.*universe/s/^# *//' /etc/apt/sources.list || true
           sudo apt-get update
@@ -46,21 +45,20 @@ jobs:
         run: |
           set -e
           PROJ="${{ steps.project-dir.outputs.dir }}"
-          cd "$PROJ/src-tauri"
-          echo "📁 准备图标（AppImage 需要至少一个方形图标）..."
+          SRCTAURI="$PROJ/src-tauri"
+          cd "$SRCTAURI"
+          echo "📁 当前目录: $(pwd)"
+          echo "📁 确保 src-tauri/icons 下存在方形图标（AppImage 必须）..."
           mkdir -p icons
-          for size in 32 128 256 512; do
-            out="icons/${size}x${size}.png"
-            if [ ! -f "$out" ]; then
-              [ -f "icons/512x512.png" ] && convert icons/512x512.png -resize ${size}x${size}! -strip "$out" || true
-              [ -f "icons/icon.png" ] && [ ! -f "$out" ] && convert icons/icon.png -resize ${size}x${size}! -strip "$out" || true
-            fi
-          done
-          if [ ! -f "icons/256x256.png" ] && [ ! -f "icons/512x512.png" ]; then
-            echo "⚠️ 生成 256x256 占位图..."
-            convert -size 256x256 xc:#4080ff -strip icons/256x256.png
-          fi
-          ls -la icons/
+          # 用 ImageMagick 在项目内绝对路径下生成方形 PNG，避免路径或仓库未提交图标导致找不到
+          ICONS_ABS="$(pwd)/icons"
+          convert -size 32x32 xc:#4080ff -strip "$ICONS_ABS/32x32.png"
+          convert -size 128x128 xc:#4080ff -strip "$ICONS_ABS/128x128.png"
+          convert -size 256x256 xc:#4080ff -strip "$ICONS_ABS/256x256.png"
+          convert -size 512x512 xc:#4080ff -strip "$ICONS_ABS/512x512.png"
+          echo "📋 生成的图标（应与 tauri.conf.json 中 icon 列表一致）:"
+          ls -la "$ICONS_ABS"/*.png
+          file "$ICONS_ABS"/256x256.png
           echo "🎨 准备前端占位..."
           mkdir -p ../dist
           echo "<!DOCTYPE html><html><head><title>机器码获取工具</title></head><body><h1>机器码获取工具</h1></body></html>" > ../dist/index.html
@@ -76,7 +74,7 @@ jobs:
           echo "🐧 机器码获取工具 - 麒麟版(Tauri v1)" > 使用说明-麒麟-apt.txt
           echo "=======================================" >> 使用说明-麒麟-apt.txt
           echo "" >> 使用说明-麒麟-apt.txt
-          echo "🎉 本包在 Ubuntu 22.04 下用系统 WebKit2GTK 4.0 构建，可在麒麟 V10 等环境运行（需 glibc 2.35+）。" >> 使用说明-麒麟-apt.txt
+          echo "🎉 本包在 Ubuntu 20.04 下用系统 WebKit2GTK 4.0 构建，可在 glibc 2.31+ 环境运行（麒麟 V10、Ubuntu 20.04 等）。" >> 使用说明-麒麟-apt.txt
           echo "   若目标机未装 WebKit，请执行：sudo apt install libwebkit2gtk-4.0-37（或 libwebkit2gtk-4.0）" >> 使用说明-麒麟-apt.txt
           echo "" >> 使用说明-麒麟-apt.txt
           echo "💻 使用：chmod +x machine-code-tool-kylin-apt.AppImage 后双击或 ./machine-code-tool-kylin-apt.AppImage" >> 使用说明-麒麟-apt.txt
