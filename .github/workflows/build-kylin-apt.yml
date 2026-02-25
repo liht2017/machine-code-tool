@@ -1,12 +1,13 @@
-# 麒麟版快速构建：Tauri v1 + 系统 WebKit2GTK 4.0，在 Ubuntu 20.04 下构建，产出的 AppImage 可在 glibc 2.31 环境（麒麟 V10、Ubuntu 20.04 等）运行。
-name: 构建麒麟版 AppImage（Tauri v1 + apt，无容器）
+# 麒麟版快速构建：在 Ubuntu 20.04 容器内构建 AppImage，产出可在 glibc 2.31（麒麟 V10、Ubuntu 20.04）运行。
+# 使用 Docker 避免依赖已下线的 ubuntu-20.04 runner；目标机需安装 libwebkit2gtk-4.0。
+name: 构建麒麟版 AppImage（Tauri v1 + apt，glibc 2.31）
 
 on:
   workflow_dispatch:
 
 jobs:
   build-kylin-apt:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
@@ -21,65 +22,55 @@ jobs:
             echo "dir=." >> $GITHUB_OUTPUT
           fi
 
-      - name: 安装 Linux 构建依赖（WebKit2GTK 4.0，20.04 含 glibc 2.31）
-        run: |
-          sudo sed -i '/^#\s*deb.*universe/s/^# *//' /etc/apt/sources.list || true
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libwebkit2gtk-4.0-dev libjavascriptcoregtk-4.0-dev \
-            libgtk-3-dev librsvg2-dev libssl-dev \
-            libayatana-appindicator3-dev libxdo-dev \
-            imagemagick build-essential curl file
-
-      - name: 安装 Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: 构建 Ubuntu 20.04 镜像（WebKit2GTK 4.0 + Rust + tauri-cli v1）
+        uses: docker/build-push-action@v6
         with:
-          components: rustfmt
+          context: ${{ steps.project-dir.outputs.dir }}
+          file: ${{ steps.project-dir.outputs.dir }}/.github/docker/Dockerfile.kylin-apt
+          push: false
+          load: true
+          tags: kylin-apt-builder:latest
 
-      - name: 安装 Tauri CLI (v1)
+      - name: 在容器内准备图标并构建 AppImage
         run: |
-          cargo install --git https://github.com/tauri-apps/tauri --branch 1.x tauri-cli
-          cargo tauri --version
-
-      - name: 准备图标并构建 AppImage
-        run: |
-          set -e
           PROJ="${{ steps.project-dir.outputs.dir }}"
-          SRCTAURI="$PROJ/src-tauri"
-          cd "$SRCTAURI"
-          echo "📁 当前目录: $(pwd)"
-          echo "📁 确保 src-tauri/icons 下存在方形图标（AppImage 必须）..."
-          mkdir -p icons
-          # 用 ImageMagick 在项目内绝对路径下生成方形 PNG，避免路径或仓库未提交图标导致找不到
-          ICONS_ABS="$(pwd)/icons"
-          convert -size 32x32 xc:#4080ff -strip "$ICONS_ABS/32x32.png"
-          convert -size 128x128 xc:#4080ff -strip "$ICONS_ABS/128x128.png"
-          convert -size 256x256 xc:#4080ff -strip "$ICONS_ABS/256x256.png"
-          convert -size 512x512 xc:#4080ff -strip "$ICONS_ABS/512x512.png"
-          echo "📋 生成的图标（应与 tauri.conf.json 中 icon 列表一致）:"
-          ls -la "$ICONS_ABS"/*.png
-          file "$ICONS_ABS"/256x256.png
-          echo "🎨 准备前端占位..."
-          mkdir -p ../dist
-          echo "<!DOCTYPE html><html><head><title>机器码获取工具</title></head><body><h1>机器码获取工具</h1></body></html>" > ../dist/index.html
-          cp tauri.conf.json tauri.conf.json.bak
-          sed -i 's/"productName":"机器码获取工具"/"productName":"machine-code-tool"/' tauri.conf.json
-          echo "🚀 构建 AppImage..."
-          cargo tauri build --verbose
-          mv tauri.conf.json.bak tauri.conf.json 2>/dev/null || true
-          APPIMG=$(find target/release/bundle/appimage -maxdepth 1 -name "*.AppImage" -type f 2>/dev/null | head -1)
-          [ -z "$APPIMG" ] && echo "❌ 未找到 AppImage" && exit 1
-          cp "$APPIMG" machine-code-tool-kylin-apt.AppImage
-          chmod +x machine-code-tool-kylin-apt.AppImage
-          echo "🐧 机器码获取工具 - 麒麟版(Tauri v1)" > 使用说明-麒麟-apt.txt
-          echo "=======================================" >> 使用说明-麒麟-apt.txt
-          echo "" >> 使用说明-麒麟-apt.txt
-          echo "🎉 本包在 Ubuntu 20.04 下用系统 WebKit2GTK 4.0 构建，可在 glibc 2.31+ 环境运行（麒麟 V10、Ubuntu 20.04 等）。" >> 使用说明-麒麟-apt.txt
-          echo "   若目标机未装 WebKit，请执行：sudo apt install libwebkit2gtk-4.0-37（或 libwebkit2gtk-4.0）" >> 使用说明-麒麟-apt.txt
-          echo "" >> 使用说明-麒麟-apt.txt
-          echo "💻 使用：chmod +x machine-code-tool-kylin-apt.AppImage 后双击或 ./machine-code-tool-kylin-apt.AppImage" >> 使用说明-麒麟-apt.txt
-          echo "✨ 功能：机器硬件信息、投标API服务 | 版本：2.1.0" >> 使用说明-麒麟-apt.txt
-        shell: bash
+          docker run --rm \
+            -v "$(pwd)/$PROJ:/workspace" \
+            -w /workspace \
+            kylin-apt-builder:latest bash -c '
+              set -e
+              cd /workspace/src-tauri
+              echo "📁 当前目录: $(pwd)"
+              echo "📁 生成方形图标（AppImage 必须）..."
+              mkdir -p icons
+              ICONS_ABS="$(pwd)/icons"
+              convert -size 32x32 xc:#4080ff -strip "$ICONS_ABS/32x32.png"
+              convert -size 128x128 xc:#4080ff -strip "$ICONS_ABS/128x128.png"
+              convert -size 256x256 xc:#4080ff -strip "$ICONS_ABS/256x256.png"
+              convert -size 512x512 xc:#4080ff -strip "$ICONS_ABS/512x512.png"
+              ls -la "$ICONS_ABS"/*.png
+              echo "🎨 准备前端占位..."
+              mkdir -p ../dist
+              echo "<!DOCTYPE html><html><head><title>机器码获取工具</title></head><body><h1>机器码获取工具</h1></body></html>" > ../dist/index.html
+              cp tauri.conf.json tauri.conf.json.bak
+              sed -i "s/\"productName\":\"机器码获取工具\"/\"productName\":\"machine-code-tool\"/" tauri.conf.json
+              echo "🚀 构建 AppImage（容器为 Ubuntu 20.04，glibc 2.31）..."
+              cargo tauri build --verbose
+              mv tauri.conf.json.bak tauri.conf.json 2>/dev/null || true
+              APPIMG=$(find target/release/bundle/appimage -maxdepth 1 -name "*.AppImage" -type f 2>/dev/null | head -1)
+              [ -z "$APPIMG" ] && echo "❌ 未找到 AppImage" && exit 1
+              cp "$APPIMG" machine-code-tool-kylin-apt.AppImage
+              chmod +x machine-code-tool-kylin-apt.AppImage
+              echo "🐧 机器码获取工具 - 麒麟版(Tauri v1)" > 使用说明-麒麟-apt.txt
+              echo "=======================================" >> 使用说明-麒麟-apt.txt
+              echo "" >> 使用说明-麒麟-apt.txt
+              echo "🎉 本包在 Ubuntu 20.04 下用系统 WebKit2GTK 4.0 构建，可在 glibc 2.31+ 环境运行（麒麟 V10、Ubuntu 20.04 等）。" >> 使用说明-麒麟-apt.txt
+              echo "   若目标机未装 WebKit，请执行：sudo apt install libwebkit2gtk-4.0-37（或 libwebkit2gtk-4.0）" >> 使用说明-麒麟-apt.txt
+              echo "" >> 使用说明-麒麟-apt.txt
+              echo "💻 使用：chmod +x machine-code-tool-kylin-apt.AppImage 后双击或 ./machine-code-tool-kylin-apt.AppImage" >> 使用说明-麒麟-apt.txt
+              echo "✨ 功能：机器硬件信息、投标API服务 | 版本：2.1.0" >> 使用说明-麒麟-apt.txt
+            '
+          ls -la "$PROJ/src-tauri/machine-code-tool-kylin-apt.AppImage" "$PROJ/src-tauri/使用说明-麒麟-apt.txt"
 
       - name: 上传麒麟版产物（apt）
         uses: actions/upload-artifact@v4
