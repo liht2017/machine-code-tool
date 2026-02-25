@@ -141,8 +141,10 @@ jobs:
           echo "📁 x86_64 构建产物:"
           ls -la target/x86_64-apple-darwin/release/ 2>/dev/null || true
           
-          A64="target/aarch64-apple-darwin/release/machine-code-tool"
-          X64="target/x86_64-apple-darwin/release/machine-code-tool"
+          # macOS 可执行文件名来自 tauri.conf.json 的 productName（机器码获取工具）
+          BIN_NAME="机器码获取工具"
+          A64="target/aarch64-apple-darwin/release/$BIN_NAME"
+          X64="target/x86_64-apple-darwin/release/$BIN_NAME"
           [ ! -f "$A64" ] && echo "❌ 缺少 $A64" && exit 1
           [ ! -f "$X64" ] && echo "❌ 缺少 $X64" && exit 1
           
