@@ -12,10 +12,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     imagemagick \
     && rm -rf /var/lib/apt/lists/*
 
-# 从 Git 安装 tauri-cli v1.5.9，使用该 tag 的 Cargo.lock 锁定依赖，避免 crates.io 上 pxfm 等使用 edition 2024 导致旧 Rust 解析失败
+# 从 Git 1.x 分支安装 tauri-cli，使用仓库 Cargo.lock 锁定依赖，避免 crates.io 上 pxfm 等 edition 2024 导致解析失败（仓库无 v1.5.9 tag）
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
-    && [ -f /root/.cargo/env ] && . /root/.cargo/env \
-    && cargo install --git https://github.com/tauri-apps/tauri --tag v1.5.9 tauri-cli
+    && . /root/.cargo/env \
+    && cargo install --git https://github.com/tauri-apps/tauri --branch 1.x tauri-cli
 
 ENV PATH="/root/.cargo/bin:$PATH"
 
