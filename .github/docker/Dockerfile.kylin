@@ -41,14 +41,17 @@ RUN set -e; \
     fi
 
 # 构建并安装 WebKit2GTK（4.1 API，依赖 glibc 2.31）
-# ENABLE_VIDEO=OFF 时 FullscreenManager.h / GPUDevice.cpp 仍引用 video，需打补丁
+# 省时方案：可先构建并推送仅含 WebKit 的镜像（到本 RUN 的 ninja install 为止），
+# 主 Dockerfile 改为 FROM 该镜像，则日常 CI 不再重编 WebKit。仅升级 WebKit 时重跑一次即可。
+# ENABLE_VIDEO=OFF 时 FullscreenManager.h / GPUDevice.cpp 仍引用 video，需打补丁；下方有打补丁后的快速校验，避免跑完 1 小时 ninja 才报错。
 ARG WEBKIT_VERSION=2.44.0
 COPY .github/docker/fullscreen_fix.sed .github/docker/apply_gpu_device_video_off.py /tmp/
 RUN bash -c 'set -e; v='"${WEBKIT_VERSION}"'; \
     cd /tmp && curl -sSL "https://webkitgtk.org/releases/webkitgtk-${v}.tar.xz" -o webkit.tar.xz \
     && tar xf webkit.tar.xz && cd webkitgtk-${v} \
     && ( test -f Source/WebCore/dom/FullscreenManager.h && sed -i -f /tmp/fullscreen_fix.sed Source/WebCore/dom/FullscreenManager.h || true ) \
-    && ( test -f Source/WebCore/Modules/WebGPU/GPUDevice.cpp && python3 /tmp/apply_gpu_device_video_off.py Source/WebCore/Modules/WebGPU/GPUDevice.cpp || true ) \
+    && ( test -f Source/WebCore/Modules/WebGPU/GPUDevice.cpp && python3 /tmp/apply_gpu_device_video_off.py Source/WebCore/Modules/WebGPU/GPUDevice.cpp ) \
+    && ( grep -q "!ENABLE(VIDEO)" Source/WebCore/Modules/WebGPU/GPUDevice.cpp && grep -q "#if ENABLE(VIDEO)" Source/WebCore/Modules/WebGPU/GPUDevice.cpp && grep -q "HTMLMediaElementEnums" Source/WebCore/dom/FullscreenManager.h ) || ( echo ">>> Patch validation failed. GPUDevice.cpp or FullscreenManager.h missing expected changes."; exit 1 ) \
     && mkdir build && cd build \
     && printf "%s\n" \
     "set(HAVE_STAT_BIRTHTIME_value 0 CACHE INTERNAL \"\" FORCE)" \
