@@ -164,9 +164,9 @@ jobs:
           echo "🚀 Windows构建"
           cargo tauri build --target ${{ matrix.target }} --bundles none --verbose
           
-          # 显示构建产物
+          # 显示构建产物（exe 名为 productName：机器码获取工具.exe）
           echo "📋 构建产物:"
-          ls -la target/${{ matrix.target }}/release/machine-code-tool* 2>/dev/null || echo "构建产物检查完成"
+          ls -la target/${{ matrix.target }}/release/*.exe 2>/dev/null | head -20
         fi
       shell: bash
 
@@ -201,9 +201,14 @@ jobs:
             exit 1
           fi
         elif [ "${{ matrix.os }}" = "windows-latest" ]; then
-          # Windows: 复制 exe（可能为 target/<triple>/release/ 或 target/release/）
+          # Windows: 复制 exe（可执行文件名来自 tauri.conf.json 的 productName：机器码获取工具.exe）
+          WIN_BIN="机器码获取工具.exe"
           WIN_EXE=""
-          if [ -f "src-tauri/target/${{ matrix.target }}/release/machine-code-tool.exe" ]; then
+          if [ -f "src-tauri/target/${{ matrix.target }}/release/$WIN_BIN" ]; then
+            WIN_EXE="src-tauri/target/${{ matrix.target }}/release/$WIN_BIN"
+          elif [ -f "src-tauri/target/release/$WIN_BIN" ]; then
+            WIN_EXE="src-tauri/target/release/$WIN_BIN"
+          elif [ -f "src-tauri/target/${{ matrix.target }}/release/machine-code-tool.exe" ]; then
             WIN_EXE="src-tauri/target/${{ matrix.target }}/release/machine-code-tool.exe"
           elif [ -f "src-tauri/target/release/machine-code-tool.exe" ]; then
             WIN_EXE="src-tauri/target/release/machine-code-tool.exe"
@@ -212,7 +217,7 @@ jobs:
             cp "$WIN_EXE" upload/${{ matrix.asset_name }}.exe
             echo "✅ Windows 文件已准备完成 (from $WIN_EXE)"
           else
-            echo "❌ 未找到 machine-code-tool.exe"
+            echo "❌ 未找到 $WIN_BIN 或 machine-code-tool.exe"
             echo "已检查: src-tauri/target/${{ matrix.target }}/release/ 与 src-tauri/target/release/"
             find src-tauri/target -name "*.exe" -type f 2>/dev/null || true
             exit 1
