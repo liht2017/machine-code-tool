@@ -47,10 +47,10 @@ jobs:
       run: |
         # macOS无需额外依赖
 
-    - name: 安装Tauri CLI (v1)
+    - name: 安装 Tauri CLI (v1，从 1.x 分支安装，crates.io 无 1.8)
       run: |
-        echo "Installing Tauri CLI 1.8..."
-        cargo install tauri-cli --version "1.8" --locked
+        echo "Installing Tauri CLI from 1.x branch..."
+        cargo install --git https://github.com/tauri-apps/tauri --branch 1.x tauri-cli
         cargo tauri --version
       shell: bash
 
@@ -237,7 +237,7 @@ jobs:
         name: ${{ matrix.asset_name }}
         path: upload/
         retention-days: 30
-
+cd
   release:
     needs: build
     runs-on: ubuntu-latest
