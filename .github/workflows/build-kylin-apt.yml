@@ -41,12 +41,15 @@ jobs:
             kylin-apt-builder:latest bash -c '
               set -e
               cd /workspace/src-tauri
-              echo "📁 准备图标..."
-              for f in 256x256 512x512; do
-                [ -f "icons/512x512.png" ] && convert icons/512x512.png -resize ${f}x${f}! -strip icons/${f}x${f}.png 2>/dev/null || true
-                [ -f "icons/icon.png" ] && [ ! -f "icons/${f}x${f}.png" ] && convert icons/icon.png -resize ${f}x${f}! -strip icons/${f}x${f}.png 2>/dev/null || true
+              echo "📁 准备图标（AppImage 需要至少一个方形图标）..."
+              for size in 32 128 256 512; do
+                out="icons/${size}x${size}.png"
+                if [ ! -f "$out" ]; then
+                  [ -f "icons/512x512.png" ] && convert icons/512x512.png -resize ${size}x${size}! -strip "$out" 2>/dev/null || true
+                  [ -f "icons/icon.png" ] && [ ! -f "$out" ] && convert icons/icon.png -resize ${size}x${size}! -strip "$out" 2>/dev/null || true
+                fi
               done
-              [ ! -f "icons/256x256.png" ] && echo "❌ 需要 icons/256x256.png 或 512x512.png" && exit 1
+              [ ! -f "icons/256x256.png" ] && [ ! -f "icons/512x512.png" ] && echo "❌ 需要 icons/icon.png 或 icons/512x512.png 以生成方形图标" && exit 1
               echo "🎨 准备前端..."
               mkdir -p ../dist
               echo "<!DOCTYPE html><html><head><title>机器码获取工具</title></head><body><h1>机器码获取工具</h1></body></html>" > ../dist/index.html
