@@ -127,7 +127,8 @@ async fn open_privacy_policy() -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn toggle_devtools(_window: tauri::Window) -> Result<(), String> {
+async fn toggle_devtools(window: tauri::Window) -> Result<(), String> {
+    window.open_devtools();
     Ok(())
 }
 

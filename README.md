@@ -37,6 +37,11 @@
 | **自行构建** | 在 **Ubuntu 20.04 或 glibc 2.31 环境**（如麒麟）上从源码编译 WebKit2GTK 4.1，再执行 `cargo tauri build` 生成 AppImage。Tauri 2 依赖 WebKit2GTK 4.1，官方包仅 22.04+ 提供，故需自编 WebKit。参考 [WebKit GTK 构建说明](https://trac.webkit.org/wiki/BuildingGtk)，构建较耗时且需较多磁盘空间。 |
 | **CI 构建麒麟版** | 本仓库提供 **Actions 工作流「构建麒麟版 AppImage (glibc 2.31)」**（仅手动触发）：在 Ubuntu 20.04 Docker 中自编 WebKit2GTK 4.1 后打 AppImage，产物可在 glibc 2.31 的麒麟上直接运行。GitHub → Actions → 选择该 workflow → Run workflow。首轮约 1～2 小时，后续有缓存会快很多。 |
 
+## 构建说明（Tauri 1.x）
+
+本工程使用 **Tauri 1.x**（非 2.0）。Windows/macOS/Linux 安装包请通过 **GitHub Actions** 构建（已配置使用 1.x CLI），不要用本地安装的 Tauri 2.0 构建，否则 Windows 可能出现授权按钮一直「程序启动中」、用户协议/隐私策略走本地、F12 无反应等问题。  
+推送代码后：GitHub → Actions → 选择对应 workflow → Run workflow，从 Artifacts 下载产物。
+
 ## 下载和安装
 
 ### 使用方法

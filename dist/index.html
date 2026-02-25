@@ -341,7 +341,7 @@
             if (window.__TAURI__.invoke) return window.__TAURI__.invoke;
             return null;
         }
-        async function waitForTauriAPI(maxAttempts = 50, interval = 100) {
+        async function waitForTauriAPI(maxAttempts = 100, interval = 100) {
             for (let i = 0; i < maxAttempts; i++) {
                 if (getTauriInvoke()) {
                     console.log(`Tauri API在第${i + 1}次尝试后可用`);
@@ -587,15 +587,15 @@
             }
         });
 
-        // 添加快捷键开启开发者工具 (F12 或 Ctrl+Shift+I)
+        // 添加快捷键开启开发者工具 (F12 或 Ctrl+Shift+I)，优先使用已初始化的 tauriInvoke
         document.addEventListener('keydown', function(e) {
             if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
-                if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
-                    window.__TAURI__.core.invoke('toggle_devtools');
-                } else if (window.__TAURI__ && window.__TAURI__.tauri && window.__TAURI__.tauri.invoke) {
-                    window.__TAURI__.tauri.invoke('toggle_devtools');
-                } else if (window.__TAURI__ && window.__TAURI__.invoke) {
-                    window.__TAURI__.invoke('toggle_devtools');
+                e.preventDefault();
+                if (tauriInvoke) {
+                    tauriInvoke('toggle_devtools').catch(function() {});
+                } else {
+                    var inv = getTauriInvoke();
+                    if (inv) inv('toggle_devtools').catch(function() {});
                 }
             }
         });

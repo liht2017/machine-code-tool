@@ -161,7 +161,8 @@ jobs:
           
           echo "✅ macOS通用版本创建完成"
         else
-          echo "🚀 Windows构建"
+          echo "🚀 Windows构建（Tauri 1.x，需 withGlobalTauri 以注入 __TAURI__）"
+          grep -A 5 '"build"' tauri.conf.json || true
           cargo tauri build --target ${{ matrix.target }} --bundles none --verbose
           
           # 显示构建产物（exe 名为 productName：机器码获取工具.exe）
