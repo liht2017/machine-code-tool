@@ -1,0 +1,21 @@
+# 使用系统自带的 WebKit2GTK 4.1（apt 安装），不编源码，构建约 5～10 分钟。
+# 适用：目标系统 glibc >= 2.34（如 Ubuntu 22.04、麒麟 V10 升级 glibc 后、较新国产系统）。
+# 若目标必须是 glibc 2.31（未升级的麒麟 V10），请用 Dockerfile.kylin（自编 WebKit，耗时长）。
+FROM ubuntu:22.04
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential curl wget file \
+    libwebkit2gtk-4.1-dev libgtk-4-dev librsvg2-dev \
+    libssl-dev libayatana-appindicator3-dev \
+    libxdo-dev libsoup-3.0-dev \
+    imagemagick \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
+    && . /root/.cargo/env && cargo install tauri-cli --locked
+
+ENV PATH="/root/.cargo/bin:$PATH"
+
+WORKDIR /workspace
+CMD ["bash"]

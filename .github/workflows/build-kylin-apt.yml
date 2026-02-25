@@ -1,0 +1,79 @@
+# 麒麟 / 新版 glibc 快速构建：用系统包 WebKit2GTK 4.1（apt），不编源码，约 5～10 分钟。
+# 适用：目标系统 glibc >= 2.34（Ubuntu 22.04、麒麟 V10 升级 glibc 后等）。否则用 build-kylin-glibc231.yml。
+name: 构建麒麟版 AppImage（apt 现成包，快速）
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-kylin-apt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 确定项目目录
+        id: project-dir
+        run: |
+          if [ -d "machine-code-tool/src-tauri" ]; then
+            echo "dir=machine-code-tool" >> $GITHUB_OUTPUT
+          else
+            echo "dir=." >> $GITHUB_OUTPUT
+          fi
+
+      - name: 构建镜像（apt 安装 WebKit，无自编）
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.project-dir.outputs.dir }}
+          file: ${{ steps.project-dir.outputs.dir }}/.github/docker/Dockerfile.kylin-apt
+          push: false
+          load: true
+          tags: kylin-apt-builder:latest
+
+      - name: 在容器内构建 Tauri AppImage
+        run: |
+          PROJ="${{ steps.project-dir.outputs.dir }}"
+          mkdir -p "$PROJ/src-tauri/upload"
+          docker run --rm \
+            -v "$(pwd)/$PROJ:/workspace" \
+            -w /workspace \
+            kylin-apt-builder:latest bash -c '
+              set -e
+              cd /workspace/src-tauri
+              echo "📁 准备图标..."
+              for f in 256x256 512x512; do
+                [ -f "icons/512x512.png" ] && convert icons/512x512.png -resize ${f}x${f}! -strip icons/${f}x${f}.png 2>/dev/null || true
+                [ -f "icons/icon.png" ] && [ ! -f "icons/${f}x${f}.png" ] && convert icons/icon.png -resize ${f}x${f}! -strip icons/${f}x${f}.png 2>/dev/null || true
+              done
+              [ ! -f "icons/256x256.png" ] && echo "❌ 需要 icons/256x256.png 或 512x512.png" && exit 1
+              echo "🎨 准备前端..."
+              mkdir -p ../dist
+              echo "<!DOCTYPE html><html><head><title>机器码获取工具</title></head><body><h1>机器码获取工具</h1></body></html>" > ../dist/index.html
+              cp tauri.conf.json tauri.conf.json.bak
+              sed -i "s/\"productName\":\"机器码获取工具\"/\"productName\":\"machine-code-tool\"/" tauri.conf.json
+              echo "🚀 构建 AppImage..."
+              cargo tauri build --verbose
+              mv tauri.conf.json.bak tauri.conf.json 2>/dev/null || true
+              APPIMG=$(find target/release/bundle/appimage -maxdepth 1 -name "*.AppImage" -type f 2>/dev/null | head -1)
+              [ -z "$APPIMG" ] && echo "❌ 未找到 AppImage" && exit 1
+              cp "$APPIMG" machine-code-tool-kylin-apt.AppImage
+              chmod +x machine-code-tool-kylin-apt.AppImage
+              echo "🐧 机器码获取工具 - 麒麟版(apt/glibc 2.35+)" > 使用说明-麒麟-apt.txt
+              echo "=======================================" >> 使用说明-麒麟-apt.txt
+              echo "" >> 使用说明-麒麟-apt.txt
+              echo "🎉 本包在 Ubuntu 22.04 下用系统 WebKit 构建，需 glibc >= 2.34（如麒麟 V10 升级后、新系统）。" >> 使用说明-麒麟-apt.txt
+              echo "" >> 使用说明-麒麟-apt.txt
+              echo "💻 使用：chmod +x machine-code-tool-kylin-apt.AppImage 后双击或 ./machine-code-tool-kylin-apt.AppImage" >> 使用说明-麒麟-apt.txt
+              echo "✨ 功能：机器硬件信息、投标API服务 | 版本：2.1.0" >> 使用说明-麒麟-apt.txt
+            '
+          ls -la "$PROJ/src-tauri/machine-code-tool-kylin-apt.AppImage" "$PROJ/src-tauri/使用说明-麒麟-apt.txt"
+
+      - name: 上传麒麟版产物（apt）
+        uses: actions/upload-artifact@v4
+        with:
+          name: machine-code-tool-kylin-apt
+          path: |
+            ${{ steps.project-dir.outputs.dir }}/src-tauri/machine-code-tool-kylin-apt.AppImage
+            ${{ steps.project-dir.outputs.dir }}/src-tauri/使用说明-麒麟-apt.txt
+          retention-days: 30

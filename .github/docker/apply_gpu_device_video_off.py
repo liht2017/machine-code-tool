@@ -44,20 +44,31 @@ class GPUDeviceVideoFrameRequestCallback final"""
         sys.exit(1)
 
     # 2) 在 class GPUDeviceVideoFrameRequestCallback 的 }; 后、importExternalTexture 前加 #endif
-    marker_end = """};
-
- Ref<GPUExternalTexture> GPUDevice::importExternalTexture(const GPUExternalTextureDescriptor& externalTextureDescriptor)"""
-    if marker_end not in content:
-        sys.stderr.write("apply_gpu_device_video_off: marker_end not found (class }; before importExternalTexture)\n")
-        sys.exit(1)
-    content = content.replace(
-        marker_end,
-        """};
-#endif
-
- Ref<GPUExternalTexture> GPUDevice::importExternalTexture(const GPUExternalTextureDescriptor& externalTextureDescriptor)""",
-        1,
-    )
+    import_line = "Ref<GPUExternalTexture> GPUDevice::importExternalTexture(const GPUExternalTextureDescriptor& externalTextureDescriptor)"
+    # tarball 可能为 }; + 换行 + 空行 + 可选空格 + import_line，尝试多种组合
+    for line_after in ("\n\n Ref<", "\n\nRef<", "\n Ref<", "\nRef<", "\n\n\tRef<"):
+        marker_end = "};" + line_after + import_line[4:]  # "};" + "\n\n Ref<" + "GPUExternalTexture>..."
+        if marker_end in content:
+            content = content.replace(
+                marker_end,
+                "};" + "\n#endif\n\n" + line_after + import_line[4:],
+                1,
+            )
+            break
+    else:
+        # 回退：在最后一个 "};" 与 "importExternalTexture" 之间插入（仅当中间只有空白时）
+        idx = content.find("importExternalTexture(const GPUExternalTextureDescriptor&")
+        if idx == -1:
+            sys.stderr.write("apply_gpu_device_video_off: marker_end not found (class }; before importExternalTexture)\n")
+            sys.exit(1)
+        # 向前找最后一个 "};"（即 class 结束处），在其后插入 #endif
+        search = content[:idx]
+        r = search.rfind("};")
+        if r == -1:
+            sys.stderr.write("apply_gpu_device_video_off: no }; before importExternalTexture\n")
+            sys.exit(1)
+        between = content[r + 2 : idx]
+        content = content[: r + 2] + "\n#endif\n\n" + between + content[idx:]
 
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(content)
