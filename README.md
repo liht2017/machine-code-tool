@@ -2,268 +2,68 @@
 
 ## 概述
 
-机器码获取工具是一个跨平台的硬件信息获取应用，用于配合广联达SRM系统进行投标时的设备身份验证。
+跨平台硬件信息获取应用，用于配合广联达 SRM 系统投标时的设备身份验证。支持 Windows、macOS、银河麒麟（Linux）。
 
 ## 功能特性
 
-- **跨平台支持**: Windows、macOS、银河麒麟
-- **硬件信息获取**: MAC地址、主板序列号、CPU序列号、硬盘序列号
-- **本地API服务**: 提供HTTP接口供业务系统调用
+- **跨平台**: Windows（32/64 位）、macOS（Intel + Apple Silicon）、银河麒麟 / Linux（AppImage）
+- **硬件信息**: MAC 地址、主板序列号、CPU 序列号、硬盘序列号
+- **本地 API**: HTTP 接口 `http://localhost:18888` 供业务系统调用
 - **授权控制**: 用户可控制是否允许信息获取
-- **安全传输**: 采用加密方式传输数据
 
 ## 系统要求
 
-### Windows
-- Windows 7 SP1 及以上版本
-- 支持 32位 和 64位 系统
+- **Windows**: 7 SP1 及以上，32/64 位
+- **macOS**: 10.13 及以上
+- **银河麒麟 / Linux**: 麒麟 V10 或 Ubuntu 20.04 等，glibc 2.31+，x86_64。AppImage 单文件免安装，通常无需额外装 WebKit。
 
-### macOS
-- macOS 10.13 及以上版本
-- 支持所有Mac设备 (Intel Mac通过Rosetta 2运行)
+## 获取安装包
 
-### 银河麒麟 / Linux
-- 银河麒麟桌面操作系统 V10 及以上版本，支持 x86_64 架构
-- **AppImage 需系统 glibc ≥ 2.35**（在 Ubuntu 22.04 环境构建）。若运行时报 `GLIBC_2.xx not found`，说明当前系统 glibc 过旧（如麒麟 V10 常见为 glibc 2.31），见下方「适配 glibc 2.31 的麒麟」。
-- 便携版为单文件 AppImage，无需单独安装依赖库
+通过 **GitHub Actions** 构建，不发布 Release，仅保留各平台构建产物（Artifacts）：
 
-#### 适配 glibc 2.31 的麒麟（如 ldd 显示 GLIBC 2.31）
-当前发布的 AppImage 在 Ubuntu 22.04 下构建，无法在 glibc 2.31 上直接运行。可选方案：
+1. 打开本仓库 **Actions** → 选择 workflow「构建机器码获取工具」
+2. **Run workflow**（或 push 到 main/master 自动触发）
+3. 运行完成后进入该次 run → **Artifacts** 下载对应平台：
+   - **machine-code-tool-kylin**：银河麒麟 / Linux（AppImage + 使用说明）
+   - **machine-code-tool-macos**：macOS 通用版
+   - **machine-code-tool-windows**：Windows 64 位
+   - **machine-code-tool-windows-32**：Windows 32 位
 
-| 方案 | 说明 |
-|------|------|
-| **系统升级** | 若麒麟/系统提供 glibc 2.35+ 的升级或新版本，升级后即可运行现有 AppImage。 |
-| **换设备** | 在 glibc 2.35+ 的 Linux、或 Windows/macOS 上使用本工具。 |
-| **自行构建** | 在 **Ubuntu 20.04 或 glibc 2.31 环境**（如麒麟）上从源码编译 WebKit2GTK 4.1，再执行 `cargo tauri build` 生成 AppImage。Tauri 2 依赖 WebKit2GTK 4.1，官方包仅 22.04+ 提供，故需自编 WebKit。参考 [WebKit GTK 构建说明](https://trac.webkit.org/wiki/BuildingGtk)，构建较耗时且需较多磁盘空间。 |
-| **CI 构建麒麟版** | 本仓库提供 **Actions 工作流「构建麒麟版 AppImage (glibc 2.31)」**（仅手动触发）：在 Ubuntu 20.04 Docker 中自编 WebKit2GTK 4.1 后打 AppImage，产物可在 glibc 2.31 的麒麟上直接运行。GitHub → Actions → 选择该 workflow → Run workflow。首轮约 1～2 小时，后续有缓存会快很多。 |
+本工程使用 **Tauri 1.x**，请勿用本地 Tauri 2.0 构建；推荐仅通过上述 Actions 获取安装包。
 
-## 构建说明（Tauri 1.x）
+## 使用说明
 
-本工程使用 **Tauri 1.x**（非 2.0）。Windows/macOS/Linux 安装包请通过 **GitHub Actions** 构建（已配置使用 1.x CLI），不要用本地安装的 Tauri 2.0 构建，否则 Windows 可能出现授权按钮一直「程序启动中」、用户协议/隐私策略走本地、F12 无反应等问题。  
-推送代码后：GitHub → Actions → 选择对应 workflow → Run workflow，从 Artifacts 下载产物。
+- **Windows**: 双击 `.exe` 运行
+- **macOS**: 双击通用二进制运行；若提示“来自身份不明的开发者”，右键 → 打开
+- **银河麒麟 / Linux**: `chmod +x *.AppImage` 后双击或 `./machine-code-tool-kylin.AppImage`。若终端出现 AT-SPI 警告，可忽略或使用 `NO_AT_BRIDGE=1 ./machine-code-tool-kylin.AppImage`
 
-## 下载和安装
+## API 接口
 
-### 使用方法
-1. 下载对应平台的可执行文件
-2. Windows: 双击 `.exe` 文件运行即可
-3. macOS: 双击文件运行即可
-4. 银河麒麟: 解压 `.tar.gz` 文件 → 进入 `portable-app` 文件夹 → 双击 `machine-code-tool-launcher` 运行
-
-## API接口
-
-### 获取机器码信息
-```
-GET http://localhost:18888/api/machine-code
-```
-
-响应格式：
-```json
-{
-  "success": true,
-  "message": "获取成功",
-  "data": {
-    "mac": "00:1A:2B:3C:4D:5E",
-    "motherboard": "MS-7A12-0101-0000000-123456",
-    "cpu": "BFEBFBFF000906E9",
-    "disk": "WDC_WD10EZEX-08WN4A0_WD-WCC6Y7123456",
-    "version": "2.1.0"
-  }
-}
-```
-
-### 检查授权状态
-```
-GET http://localhost:18888/api/auth-status
-```
-
-### 设置授权状态
-```
-POST http://localhost:18888/api/set-auth
-Content-Type: application/json
-
-{
-  "authorized": true
-}
-```
-
-### 健康检查
-```
-GET http://localhost:18888/api/health
-```
-
-## 快速构建 (推荐)
-
-### Windows用户
-
-1. **如果没有安装Rust**，双击运行 `install-rust.bat`
-2. **构建项目**，双击运行 `build.bat`
-   - 脚本会自动安装Tauri CLI
-   - 构建Tauri应用和安装包
-3. 构建完成后，安装包位于 `release/machine-code-tool-windows.exe`
-
-### macOS/Linux用户
-
-1. **安装Rust**（如果没有安装）:
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source ~/.cargo/env
-```
-
-2. **构建项目**:
-```bash
-chmod +x build.sh
-./build.sh
-```
-
-3. 构建完成后，安装包位于 `release/` 目录
-   - macOS: `machine-code-tool-macos.dmg`
-   - Linux: `machine-code-tool-kylin.AppImage`（单文件自带依赖，下载即用、无需安装）
-
-## 详细构建步骤
-
-### 环境要求
-- Rust 1.70+（会自动安装最新版本）
-- 支持的操作系统：Windows 7+, macOS 10.12+, Linux
-
-### 手动构建
-
-1. **安装Rust和Tauri CLI**
-```bash
-# 安装Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source ~/.cargo/env
-
-# 安装Tauri CLI
-cargo install tauri-cli
-```
-
-2. **进入项目目录**
-```bash
-cd machine-code-tool
-```
-
-3. **构建项目**
-```bash
-# 开发版本
-cargo tauri dev
-
-# 发布版本（创建安装包）
-cargo tauri build
-```
-
-4. **查找构建产物**
-```bash
-# 安装包位于：
-# Windows: src-tauri/target/release/bundle/msi/ 或 bundle/nsis/
-# macOS: src-tauri/target/release/bundle/dmg/
-# Linux: src-tauri/target/release/bundle/appimage/*.AppImage（推荐，免安装依赖）
-
-# 可执行文件位于：
-# src-tauri/target/release/machine-code-tool(.exe)
-```
+- 获取机器码: `GET http://localhost:18888/api/machine-code`
+- 授权状态: `GET http://localhost:18888/api/auth-status`
+- 设置授权: `POST http://localhost:18888/api/set-auth`，Body: `{"authorized": true}`
+- 健康检查: `GET http://localhost:18888/health`
 
 ## 配置文件
 
-配置文件位置：
 - Windows: `%APPDATA%\machine-code-tool\config.json`
 - macOS: `~/Library/Application Support/machine-code-tool/config.json`
 - Linux: `~/.config/machine-code-tool/config.json`
 
-配置格式：
-```json
-{
-  "authorized": false,
-  "auto_start": true,
-  "port": 18888,
-  "version": "2.1.0"
-}
-```
+## 技术栈
 
-## 安全说明
-
-- 工具仅获取必要的硬件标识信息
-- 不会收集个人文件、浏览记录等敏感数据
-- 数据传输采用HTTPS加密
-- 用户可随时控制授权状态
+- **Tauri 1.x**: 桌面壳（非 2.0）
+- **Rust**: 系统信息、HTTP 服务、加密
+- **warp**: HTTP 服务
+- **sysinfo / 平台 API**: 硬件信息
 
 ## 故障排除
 
-### 常见问题
+- **端口 18888 被占用**：修改配置文件中的 `port` 或关闭占用程序
+- **获取硬件信息失败**：确认已点击「开启授权」；Windows 可尝试管理员权限
+- **麒麟 / Linux 报 GLIBC_2.xx not found**：当前 Linux 包在 Ubuntu 20.04 环境构建，需 glibc 2.31+；麒麟 V10 一般满足
 
-1. **端口被占用**
-   - 检查端口18888是否被其他程序占用
-   - 可在配置文件中修改端口号
+## 版权与支持
 
-2. **获取硬件信息失败**
-   - 确保以管理员权限运行
-   - 检查防病毒软件是否阻止
-
-3. **银河麒麟系统限制**
-   - 目前仅支持获取MAC地址
-   - 其他硬件信息显示为"————"
-
-### 日志查看
-
-日志文件位置：
-- Windows: `%APPDATA%\machine-code-tool\logs\`
-- macOS: `~/Library/Application Support/machine-code-tool/logs/`
-- Linux: `~/.local/share/machine-code-tool/logs/`
-
-## 使用说明
-
-### 首次使用
-1. 运行程序后，界面显示"未授权"状态
-2. 点击"开启授权"按钮，允许获取硬件信息
-3. 程序会自动启动HTTP服务（端口18888）
-4. 点击"刷新信息"获取硬件信息
-
-### 与SRM系统集成
-- 程序启动后会在后台提供API服务
-- SRM投标页面会自动调用本地API获取机器码
-- 如果检测不到服务，会提示下载安装工具
-
-### 常见问题
-
-**Q: 构建时提示"cargo: command not found"**
-A: 请先安装Rust环境，Windows用户可运行 `install-rust.bat`
-
-**Q: 程序启动后无法获取硬件信息**
-A: 请确保：
-- 点击了"开启授权"按钮
-- Windows用户可能需要管理员权限
-- 防火墙允许程序运行
-
-**Q: 端口18888被占用**
-A: 请关闭占用该端口的其他程序，或修改源码中的端口号
-
-**Q: 银河麒麟/Linux 运行 AppImage 报 GLIBC_2.32 / 2.34 / 2.35 not found**
-A: 当前 AppImage 在 Ubuntu 22.04 下构建，需要系统 **glibc ≥ 2.35**。银河麒麟 V10 部分版本为 glibc 2.31，会报此错。可尝试：(1) 升级到系统提供的更新版本（若 glibc 已升级）；(2) 在另一台 glibc 2.35+ 的 Linux 或 Windows/macOS 上使用本工具。
-
-**Q: 银河麒麟系统只能获取MAC地址**
-A: 这是正常现象，该系统暂不支持获取其他硬件信息
-
-## 技术栈
-
-- **Rust**: 系统编程语言，高性能、内存安全
-- **egui**: 轻量级GUI框架，跨平台支持
-- **warp**: 高性能HTTP服务器
-- **sysinfo**: 系统信息获取库
-- **tokio**: 异步运行时
-
-## 技术支持
-
-如遇问题请联系：
-- 客服电话：400-901-8866
-- 邮箱：service@glodon.com
-- 技术支持：tech-support@glodon.com
-
-## 版权信息
-
-© 2024 广联达科技股份有限公司 版权所有
-
-本软件采用Rust语言开发，具有以下优势：
-- 🚀 高性能：接近C/C++的运行速度
-- 🛡️ 内存安全：避免常见的内存错误
-- 🔧 易维护：现代化的包管理和构建系统
-- 📦 小体积：单文件可执行程序，无需额外运行时
+© 广联达科技股份有限公司  
+技术支持：service@glodon.com / tech-support@glodon.com

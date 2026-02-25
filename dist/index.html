@@ -600,16 +600,30 @@
             }
         });
 
+        function forceRepaint() {
+            try {
+                document.body.style.opacity = '0.99';
+                requestAnimationFrame(function() {
+                    document.body.offsetHeight;
+                    requestAnimationFrame(function() {
+                        document.body.style.opacity = '';
+                    });
+                });
+            } catch (e) {}
+        }
+
         window.addEventListener('DOMContentLoaded', async () => {
             console.log('DOM加载完成，等待Tauri API...');
             const tauriAvailable = await waitForTauriAPI();
 
             if (tauriAvailable) {
                 console.log('Tauri API可用，开始初始化应用');
-                initializeApp();
+                await initializeApp();
+                forceRepaint();
             } else {
                 console.error('Tauri API不可用，使用备用方案');
                 handleNonTauriEnvironment();
+                forceRepaint();
             }
         });
     </script>

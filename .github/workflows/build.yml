@@ -31,12 +31,79 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: 安装Rust
+    - name: 确定项目目录
+      id: project-dir
+      run: |
+        if [ -d "machine-code-tool/src-tauri" ]; then
+          echo "dir=machine-code-tool" >> $GITHUB_OUTPUT
+        else
+          echo "dir=." >> $GITHUB_OUTPUT
+        fi
+
+    - name: 构建 Ubuntu 20.04 镜像（仅 Linux，麒麟版 AppImage）
+      if: matrix.os == 'ubuntu-latest'
+      uses: docker/build-push-action@v6
+      with:
+        context: ${{ steps.project-dir.outputs.dir }}
+        file: ${{ steps.project-dir.outputs.dir }}/.github/docker/Dockerfile.kylin-apt
+        push: false
+        load: true
+        tags: kylin-apt-builder:latest
+
+    - name: Linux 在容器内构建 AppImage（glibc 2.31，麒麟 V10）
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        PROJ="${{ steps.project-dir.outputs.dir }}"
+        docker run --rm \
+          -v "$(pwd)/$PROJ:/workspace" \
+          -w /workspace \
+          kylin-apt-builder:latest bash -c '
+            set -e
+            cd /workspace/src-tauri
+            mkdir -p icons
+            ICONS_ABS="$(pwd)/icons"
+            SRC_ICON=""
+            [ -f "$ICONS_ABS/icon.png" ] && SRC_ICON="$ICONS_ABS/icon.png"
+            [ -z "$SRC_ICON" ] && [ -f "$ICONS_ABS/512x512.png" ] && SRC_ICON="$ICONS_ABS/512x512.png"
+            for s in 32 128 256 512; do
+              if [ -n "$SRC_ICON" ]; then
+                convert "$SRC_ICON" -resize ${s}x${s} -strip "PNG32:$ICONS_ABS/${s}x${s}.png"
+              elif [ -f "$ICONS_ABS/${s}x${s}.png" ]; then
+                convert "$ICONS_ABS/${s}x${s}.png" -strip "PNG32:$ICONS_ABS/${s}x${s}.png"
+              else
+                convert -size ${s}x${s} xc:none -fill "#4080ff" -draw "rectangle 0,0 $s,$s" -strip "PNG32:$ICONS_ABS/${s}x${s}.png"
+              fi
+            done
+            mkdir -p ../dist
+            [ ! -f ../dist/index.html ] && cp /workspace/.github/docker/kylin-fallback-index.html ../dist/index.html
+            cp tauri.conf.json tauri.conf.json.bak
+            sed -i "s/\"productName\":\"机器码获取工具\"/\"productName\":\"machine-code-tool\"/" tauri.conf.json
+            cargo tauri build --verbose
+            mv tauri.conf.json.bak tauri.conf.json 2>/dev/null || true
+            APPIMG=$(find target/release/bundle/appimage -maxdepth 1 -name "*.AppImage" -type f 2>/dev/null | head -1)
+            [ -z "$APPIMG" ] && echo "❌ 未找到 AppImage" && exit 1
+            cp "$APPIMG" machine-code-tool-kylin-apt.AppImage
+            chmod +x machine-code-tool-kylin-apt.AppImage
+            echo "🐧 机器码获取工具 - 银河麒麟/Linux（AppImage）" > 使用说明-麒麟-apt.txt
+            echo "=======================================" >> 使用说明-麒麟-apt.txt
+            echo "🎉 glibc 2.31+（麒麟 V10、Ubuntu 20.04 等），单文件免安装。若缺 WebKit 可：sudo apt install libwebkit2gtk-4.0-37" >> 使用说明-麒麟-apt.txt
+            echo "💻 chmod +x *.AppImage 后双击或 ./machine-code-tool-kylin-apt.AppImage" >> 使用说明-麒麟-apt.txt
+            echo "⚠️ AT-SPI 警告可忽略或 NO_AT_BRIDGE=1 ./machine-code-tool-kylin-apt.AppImage" >> 使用说明-麒麟-apt.txt
+          '
+        mkdir -p upload
+        cp "$PROJ/src-tauri/machine-code-tool-kylin-apt.AppImage" upload/machine-code-tool-kylin.AppImage
+        cp "$PROJ/src-tauri/使用说明-麒麟-apt.txt" upload/使用说明.txt
+        chmod +x upload/machine-code-tool-kylin.AppImage
+        ls -la upload/
+
+    - name: 安装Rust（macOS / Windows）
+      if: matrix.os != 'ubuntu-latest'
       uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ matrix.target == 'universal-apple-darwin' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.target }}
 
     - name: 缓存Cargo依赖
+      if: matrix.os != 'ubuntu-latest'
       uses: actions/cache@v4
       with:
         path: |
@@ -45,89 +112,19 @@ jobs:
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: 安装系统依赖 (macOS)
-      if: matrix.os == 'macos-latest'
+    - name: 安装 Tauri CLI v1（macOS / Windows）
+      if: matrix.os != 'ubuntu-latest'
       run: |
-        # macOS无需额外依赖
-
-    - name: 安装 Tauri CLI (v1，从 1.x 分支安装，crates.io 无 1.8)
-      run: |
-        echo "Installing Tauri CLI from 1.x branch..."
         cargo install --git https://github.com/tauri-apps/tauri --branch 1.x tauri-cli
         cargo tauri --version
       shell: bash
 
-    - name: 构建
+    - name: 构建（macOS / Windows）
+      if: matrix.os != 'ubuntu-latest'
       run: |
         set -e
         cd src-tauri
-        echo "开始Tauri构建..."
-        echo "目标平台: ${{ matrix.target }}"
-        echo "当前目录: $(pwd)"
-        echo "Rust版本: $(rustc --version)"
-        echo "Cargo版本: $(cargo --version)"
-        echo "Tauri版本: $(cargo tauri --version)"
-        
-        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          echo "🎯 Linux构建：在 Runner 上直接构建 AppImage（避免 Docker 内路径解析问题）"
-          echo "📦 安装系统依赖..."
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq \
-            libwebkit2gtk-4.0-dev libjavascriptcoregtk-4.0-dev libgtk-3-dev libayatana-appindicator3-dev \
-            librsvg2-dev libssl-dev libfuse2 file
-          echo "📁 当前目录与 icons："
-          pwd
-          ls -la icons/ 2>/dev/null || true
-          sudo apt-get install -y -qq imagemagick 2>/dev/null || true
-          SRC_ICON=""
-          [ -f "icons/512x512.png" ] && SRC_ICON="icons/512x512.png"
-          [ -z "$SRC_ICON" ] && [ -f "icons/icon.png" ] && SRC_ICON="icons/icon.png"
-          if [ -n "$SRC_ICON" ]; then
-            convert "$SRC_ICON" -resize 256x256! -strip icons/256x256.png
-            convert "$SRC_ICON" -resize 512x512! -strip icons/512x512.png
-            echo "已用 ImageMagick 重新生成 256x256 与 512x512（-strip 清理元数据）"
-          fi
-          if [ ! -f "icons/256x256.png" ]; then echo "❌ 需要 icons/512x512.png 或 icon.png"; exit 1; fi
-          file icons/256x256.png icons/512x512.png 2>/dev/null || true
-          identify icons/256x256.png icons/512x512.png 2>/dev/null || true
-          echo "🎨 准备前端资源 (../dist)..."
-          mkdir -p ../dist
-          echo '<!DOCTYPE html><html><head><title>机器码获取工具</title></head><body><h1>机器码获取工具</h1></body></html>' > ../dist/index.html
-          echo "🔧 Linux 构建时临时使用 ASCII productName，避免 freedesktop 图标路径编码问题..."
-          cp tauri.conf.json tauri.conf.json.bak
-          sed -i 's/"productName":"机器码获取工具"/"productName":"machine-code-tool"/' tauri.conf.json
-          grep "productName" tauri.conf.json
-          echo "🚀 构建完整 bundle（含 AppImage）..."
-          RUST_BACKTRACE=1 cargo tauri build --verbose
-          mv tauri.conf.json.bak tauri.conf.json 2>/dev/null || true
-          echo "✅ 验证 AppImage 产物..."
-          APPIMG=$(find target/release/bundle/appimage -maxdepth 1 -name "*.AppImage" -type f 2>/dev/null | head -1)
-          if [ -z "$APPIMG" ] || [ ! -f "$APPIMG" ]; then
-            echo "❌ 未找到 AppImage"
-            ls -la target/release/bundle/appimage/ 2>/dev/null || true
-            exit 1
-          fi
-          cp "$APPIMG" machine-code-tool-kylin.AppImage
-          chmod +x machine-code-tool-kylin.AppImage
-          echo "📦 已产出: machine-code-tool-kylin.AppImage"
-          ls -lh machine-code-tool-kylin.AppImage
-          echo "🐧 机器码获取工具 - 银河麒麟/Linux版（AppImage）" > 使用说明.txt
-          echo "=======================================" >> 使用说明.txt
-          echo "" >> 使用说明.txt
-          echo "🎉 单文件自带依赖，无需安装系统库即可运行（需 glibc 2.31+，适配麒麟 V10）。" >> 使用说明.txt
-          echo "" >> 使用说明.txt
-          echo "⚠️ 若出现 GLIBC_2.xx not found：说明当前系统 glibc 过旧，请升级系统或联系管理员。" >> 使用说明.txt
-          echo "" >> 使用说明.txt
-          echo "💻 使用方法：" >> 使用说明.txt
-          echo "  1. 右键 → 属性 → 权限：勾选「允许作为程序执行」" >> 使用说明.txt
-          echo "  或 终端执行：chmod +x machine-code-tool-kylin.AppImage" >> 使用说明.txt
-          echo "  2. 双击运行，或在终端执行：./machine-code-tool-kylin.AppImage" >> 使用说明.txt
-          echo "" >> 使用说明.txt
-          echo "✨ 功能：获取机器硬件信息，提供投标API服务" >> 使用说明.txt
-          echo "📝 版本：2.1.0（AppImage 便携版）" >> 使用说明.txt
-          echo "📋 Linux 构建产物:"
-          ls -la machine-code-tool-kylin.AppImage 使用说明.txt 2>/dev/null || true
-        elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+        if [ "${{ matrix.os }}" = "macos-latest" ]; then
           echo "🍎 macOS构建：创建通用二进制文件"
           
           # 构建两种架构（当前目录已在 src-tauri，产物在 src-tauri/target/<triple>/release/）
@@ -171,25 +168,11 @@ jobs:
         fi
       shell: bash
 
-    - name: 复制并重命名构建产物
+    - name: 复制并重命名构建产物（Linux 已在容器步骤中写入 upload/）
+      if: matrix.os != 'ubuntu-latest'
       run: |
         mkdir -p upload
-        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          # Linux: 复制 AppImage（自带依赖，下载即用）
-          echo "查找 Linux AppImage 产物..."
-          if [ -f "src-tauri/machine-code-tool-kylin.AppImage" ]; then
-            echo "📦 复制 AppImage（无需安装依赖）..."
-            cp src-tauri/machine-code-tool-kylin.AppImage upload/${{ matrix.asset_name }}.AppImage
-            cp src-tauri/使用说明.txt upload/使用说明.txt
-            chmod +x upload/${{ matrix.asset_name }}.AppImage
-            echo "✅ Linux AppImage 已准备（下载后 chmod +x 即可运行）"
-          else
-            echo "❌ 未找到 AppImage"
-            echo "已检查: src-tauri/machine-code-tool-kylin.AppImage"
-            find . -name "*.AppImage" -type f 2>/dev/null || true
-            exit 1
-          fi
-        elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+        if [ "${{ matrix.os }}" = "macos-latest" ]; then
           # macOS: 复制通用二进制文件
           if [ -f "src-tauri/machine-code-tool-universal" ]; then
             cp src-tauri/machine-code-tool-universal upload/${{ matrix.asset_name }}
@@ -271,64 +254,3 @@ jobs:
         name: ${{ matrix.asset_name }}
         path: upload/
         retention-days: 30
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    
-    steps:
-    - name: 下载所有构建产物
-      uses: actions/download-artifact@v4
-      
-    - name: 创建发布包
-      run: |
-        echo "创建发布包..."
-        
-        # 为每个平台创建ZIP包
-        for dir in machine-code-tool-*; do
-          if [ -d "$dir" ]; then
-            echo "打包 $dir..."
-            cd "$dir"
-            # 各平台统一命名为 ${dir}.zip
-            zip -r "../${dir}.zip" .
-            cd ..
-          fi
-        done
-        
-        ls -la *.zip
-        
-    - name: 创建Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v2.1.0-${{ github.run_number }}
-        name: 机器码获取工具 v2.1.0-${{ github.run_number }}
-        body: |
-          ## 🎉 机器码获取工具 v2.1.0
-          
-          ### 📦 下载说明
-          - **Windows用户**：64位下载 `machine-code-tool-windows.zip`，32位下载 `machine-code-tool-windows-32.zip`
-          - **macOS用户**：下载 `machine-code-tool-macos.zip`（通用版本，支持Intel和Apple Silicon）
-          - **银河麒麟/Linux用户**：下载 `machine-code-tool-kylin.zip`（内为 AppImage，单文件自带依赖，下载即用、无需安装）
-          
-          ### ✨ 功能特性
-          - 获取机器硬件信息（MAC地址、主板序列号、CPU序列号、硬盘序列号）
-          - 提供本地API服务供投标页面调用
-          - 显示软件版本和用户协议
-          - 跨平台支持（Windows、macOS、银河麒麟/Linux）
-          
-          ### 🔧 技术特性
-          - **银河麒麟/Linux版**：AppImage 便携格式，无需安装系统依赖，chmod +x 后直接运行
-          - **其他平台**：原生构建，性能优化
-          - 使用Rust原生TLS，无OpenSSL依赖
-          
-          ### 📝 版本信息
-          - 版本：2.1.0
-          - 构建：${{ github.run_number }}
-          - 提交：${{ github.sha }}
-        files: |
-          *.zip
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
