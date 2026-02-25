@@ -16,12 +16,12 @@ path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "2.0", features = [] }
+tauri-build = { version = "1.8", features = [] }
 
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "2.0", features = [] }
+tauri = { version = "1.8", features = [] }
 
 # Web服务框架
 tokio = { version = "1.0", features = ["full"] }
@@ -77,11 +77,8 @@ system-configuration = "0.5"
 nix = "0.27"
 
 [features]
-# by default Tauri runs in production mode
-# when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
+# Tauri v1: 生产构建使用 filesystem protocol
 default = [ "custom-protocol" ]
-# this feature is used for production builds where `devPath` points to the filesystem
-# DO NOT remove this
 custom-protocol = [ "tauri/custom-protocol" ]
 
 # 确保使用原生TLS实现，避免OpenSSL依赖

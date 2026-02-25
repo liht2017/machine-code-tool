@@ -128,8 +128,6 @@ async fn open_privacy_policy() -> Result<(), String> {
 
 #[tauri::command]
 async fn toggle_devtools(_window: tauri::Window) -> Result<(), String> {
-    // Tauri 2.x 中开发者工具的API可能不同，这里简化处理
-    // 用户可以通过F12或右键菜单打开开发者工具
     Ok(())
 }
 
