@@ -85,11 +85,21 @@ jobs:
             [ -z "$APPIMG" ] && echo "❌ 未找到 AppImage" && exit 1
             cp "$APPIMG" machine-code-tool-kylin-apt.AppImage
             chmod +x machine-code-tool-kylin-apt.AppImage
-            echo "🐧 机器码获取工具 - 银河麒麟/Linux（AppImage）" > 使用说明-麒麟-apt.txt
+            echo "🐧 机器码获取工具 - 银河麒麟 / Linux（AppImage）" > 使用说明-麒麟-apt.txt
             echo "=======================================" >> 使用说明-麒麟-apt.txt
-            echo "🎉 glibc 2.31+（麒麟 V10、Ubuntu 20.04 等），单文件免安装。若缺 WebKit 可：sudo apt install libwebkit2gtk-4.0-37" >> 使用说明-麒麟-apt.txt
-            echo "💻 chmod +x *.AppImage 后双击或 ./machine-code-tool-kylin-apt.AppImage" >> 使用说明-麒麟-apt.txt
-            echo "⚠️ AT-SPI 警告可忽略或 NO_AT_BRIDGE=1 ./machine-code-tool-kylin-apt.AppImage" >> 使用说明-麒麟-apt.txt
+            echo "" >> 使用说明-麒麟-apt.txt
+            echo "🎉 适用于麒麟 V10、Ubuntu 20.04 等，单文件免安装。" >> 使用说明-麒麟-apt.txt
+            echo "" >> 使用说明-麒麟-apt.txt
+            echo "💻 使用步骤（优先用鼠标操作）：" >> 使用说明-麒麟-apt.txt
+            echo "" >> 使用说明-麒麟-apt.txt
+            echo "1️⃣ 先尝试直接双击「machine-code-tool-kylin.AppImage」运行。" >> 使用说明-麒麟-apt.txt
+            echo "" >> 使用说明-麒麟-apt.txt
+            echo "2️⃣ 若无法运行或提示没有执行权限：" >> 使用说明-麒麟-apt.txt
+            echo "   右键点击该文件 → 选择「属性」→ 打开「权限」标签 → 勾选「允许作为程序执行」→ 关闭后双击运行。" >> 使用说明-麒麟-apt.txt
+            echo "" >> 使用说明-麒麟-apt.txt
+            echo "3️⃣ 若打开时出现 AT-SPI 相关提示，可忽略不影响使用。" >> 使用说明-麒麟-apt.txt
+            echo "" >> 使用说明-麒麟-apt.txt
+            echo "✨ 功能：获取机器硬件信息，提供投标API服务 | 📝 版本：2.1.0" >> 使用说明-麒麟-apt.txt
           '
         mkdir -p upload
         cp "$PROJ/src-tauri/machine-code-tool-kylin-apt.AppImage" upload/machine-code-tool-kylin.AppImage
@@ -225,8 +235,17 @@ jobs:
           fi
           echo "=========================" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "💻 使用方法：" >> upload/使用说明.txt
-          echo "双击 ${{ matrix.asset_name }}.exe 即可运行" >> upload/使用说明.txt
+          echo "💻 使用步骤（全程用鼠标即可）：" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "1️⃣ 解压下载的压缩包" >> upload/使用说明.txt
+          echo "   右键点击下载的 zip 文件 → 选择「解压到当前文件夹」或「全部解压」。" >> upload/使用说明.txt
+          echo "   解压后会看到「${{ matrix.asset_name }}.exe」和本说明文件。" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "2️⃣ 运行程序" >> upload/使用说明.txt
+          echo "   双击「${{ matrix.asset_name }}.exe」即可打开工具。" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "3️⃣ 若出现「无法验证发布者」或「Windows 已保护您的电脑」" >> upload/使用说明.txt
+          echo "   本工具未购买商业签名，属于正常提示。请点击「更多信息」→ 再点击「仍要运行」即可正常使用。" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "✨ 功能：获取机器硬件信息，提供投标API服务" >> upload/使用说明.txt
           echo "📝 版本：2.1.0" >> upload/使用说明.txt
@@ -235,15 +254,16 @@ jobs:
           echo "🍎 机器码获取工具 - macOS版（通用版本）" > upload/使用说明.txt
           echo "=================================" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "🎉 此版本同时支持Intel和Apple Silicon芯片！" >> upload/使用说明.txt
+          echo "🎉 此版本同时支持 Intel 和 Apple Silicon 芯片！" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "💻 使用方法：" >> upload/使用说明.txt
-          echo "双击 ${{ matrix.asset_name }} 即可运行" >> upload/使用说明.txt
+          echo "💻 使用步骤（全程用鼠标即可）：" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
-          echo "🔒 安全提示：" >> upload/使用说明.txt
-          echo "如果系统提示"来自身份不明的开发者"，请：" >> upload/使用说明.txt
-          echo "1. 右键点击文件 → 打开" >> upload/使用说明.txt
-          echo "2. 或在终端运行：xattr -rd com.apple.quarantine ${{ matrix.asset_name }}" >> upload/使用说明.txt
+          echo "1️⃣ 运行程序" >> upload/使用说明.txt
+          echo "   双击「${{ matrix.asset_name }}」即可打开工具。" >> upload/使用说明.txt
+          echo "" >> upload/使用说明.txt
+          echo "2️⃣ 若提示「无法打开，因为来自身份不明的开发者」，任选一种方式即可：" >> upload/使用说明.txt
+          echo "   方式一：右键点击该文件 → 选择「打开」→ 在弹窗中再次点击「打开」。之后可直接双击运行。" >> upload/使用说明.txt
+          echo "   方式二：打开「系统设置」→ 左侧点「隐私与安全」→ 在右侧「安全性」区域找到被阻止的本程序 → 点击「仍要打开」→ 在确认弹窗中再点「打开」。" >> upload/使用说明.txt
           echo "" >> upload/使用说明.txt
           echo "✨ 功能：获取机器硬件信息，提供投标API服务" >> upload/使用说明.txt
           echo "📝 版本：2.1.0（通用版本）" >> upload/使用说明.txt
