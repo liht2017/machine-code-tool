@@ -39,6 +39,7 @@ jobs:
         else
           echo "dir=." >> $GITHUB_OUTPUT
         fi
+      shell: bash
 
     - name: 构建 Ubuntu 20.04 镜像（仅 Linux，麒麟版 AppImage）
       if: matrix.os == 'ubuntu-latest'
@@ -118,6 +119,7 @@ jobs:
         cargo install --git https://github.com/tauri-apps/tauri --branch 1.x tauri-cli
         cargo tauri --version
       shell: bash
+
 
     - name: 构建（macOS / Windows）
       if: matrix.os != 'ubuntu-latest'
