@@ -41,13 +41,13 @@ jobs:
               set -e
               cd /workspace/src-tauri
               echo "📁 当前目录: $(pwd)"
-              echo "📁 生成方形图标（Tauri 要求 RGBA：透明底+绘制，确保带 alpha 通道）..."
+              echo "📁 生成方形图标（Tauri 要求 32-bit RGBA，用 PNG32: 强制输出）..."
               mkdir -p icons
               ICONS_ABS="$(pwd)/icons"
               for s in 32 128 256 512; do
-                convert -size ${s}x${s} xc:none -fill "#4080ff" -draw "rectangle 0,0 $s,$s" -strip "$ICONS_ABS/${s}x${s}.png"
+                convert -size ${s}x${s} xc:none -fill "#4080ff" -draw "rectangle 0,0 $s,$s" -strip "PNG32:$ICONS_ABS/${s}x${s}.png"
               done
-              identify -verbose "$ICONS_ABS/32x32.png" | grep -E "Type|Channel|Depth" || true
+              identify -verbose "$ICONS_ABS/32x32.png" | grep -E "Type|Channel|Depth|Colorspace" || true
               ls -la "$ICONS_ABS"/*.png
               echo "🎨 准备前端占位..."
               mkdir -p ../dist
