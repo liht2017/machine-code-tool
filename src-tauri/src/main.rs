@@ -165,7 +165,8 @@ fn cors_preflight_response() -> warp::http::Response<Vec<u8>> {
         .status(warp::http::StatusCode::NO_CONTENT)
         .header("Access-Control-Allow-Origin", "*")
         .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        .header("Access-Control-Allow-Headers", "Content-Type, Origin, Accept")
+        // 允许前端任意请求头（含 jc-gw-sign 等自定义头），避免预检被拒；非凭证请求可用 *
+        .header("Access-Control-Allow-Headers", "*")
         .header("Access-Control-Max-Age", "86400")
         .body(Vec::new())
         .expect("CORS preflight response build")
