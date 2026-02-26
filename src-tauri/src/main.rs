@@ -213,16 +213,15 @@ async fn start_http_server(state: Arc<Mutex<AppState>>) {
     // 添加UTF-8编码头
     let utf8_header = warp::reply::with::header("content-type", "application/json; charset=utf-8");
 
-    let routes = opt_machine
-        .or(opt_auth)
-        .or(opt_set)
-        .or(opt_health)
-        .or(machine_code)
+    // 重要：OPTIONS 预检不经过 warp 的 cors 层，直接返回我们自己的带 CORS 头的 204，避免 warp 对 OPTIONS 的拦截/覆盖导致缺少 Access-Control-Allow-Origin
+    let opt_routes = opt_machine.or(opt_auth).or(opt_set).or(opt_health);
+    let api_routes = machine_code
         .or(auth_status)
         .or(set_auth)
         .or(health)
         .with(cors)
         .with(utf8_header);
+    let routes = opt_routes.or(api_routes);
 
     // HTTP服务已启动: http://localhost:18888
     warp::serve(routes)
