@@ -43,8 +43,8 @@
 - 授权状态: `GET http://localhost:18888/api/auth-status`
 - 设置授权: `POST http://localhost:18888/api/set-auth`，Body: `{"authorized": true}`
 - 健康检查: `GET http://localhost:18888/health`
-- 用户协议：请修改index.html 中openUserAgreement 的配置获取地址
-- 隐私策略：请修改index.html openPrivacyPolicy 的配置获取地址
+- 用户协议：请修改index.html 中 openUserAgreement 的配置获取地址
+- 隐私策略：请修改index.html 中 openPrivacyPolicy 的配置获取地址
 
 ## 配置文件
 

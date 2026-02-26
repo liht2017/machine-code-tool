@@ -159,11 +159,23 @@ async fn fetch_remote_content(url: String) -> Result<serde_json::Value, String> 
         .map_err(|e| format!("JSON解析失败: {}", e))
 }
 
+// 返回带完整 CORS 头的 OPTIONS 预检响应（直接用 http::Response，避免 warp reply 链未生效）
+fn cors_preflight_response() -> warp::http::Response<Vec<u8>> {
+    warp::http::Response::builder()
+        .status(warp::http::StatusCode::NO_CONTENT)
+        .header("Access-Control-Allow-Origin", "*")
+        .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        .header("Access-Control-Allow-Headers", "Content-Type, Origin, Accept")
+        .header("Access-Control-Max-Age", "86400")
+        .body(Vec::new())
+        .expect("CORS preflight response build")
+}
+
 // HTTP服务器相关函数
 async fn start_http_server(state: Arc<Mutex<AppState>>) {
     use warp::http::StatusCode;
 
-    // CORS：允许跨域（页面在 xyst.dev.com 等访问 127.0.0.1:18888 时预检与正式请求均需 CORS 头）
+    // CORS：允许跨域（GET/POST 响应也需 CORS 头，由 cors 层添加）
     let cors = warp::cors()
         .allow_any_origin()
         .allow_headers(vec!["content-type", "Content-Type", "Origin", "Accept", "Access-Control-Request-Method", "Access-Control-Request-Headers"])
@@ -172,31 +184,11 @@ async fn start_http_server(state: Arc<Mutex<AppState>>) {
 
     let state_filter = warp::any().map(move || state.clone());
 
-    // OPTIONS 预检：返回 204 + 显式 CORS 头（warp::reply::with::header 签名为 (name, value)，用作 .with() 的 filter）
-    let opt_machine = warp::path!("api" / "machine-code").and(warp::options())
-        .map(|| warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT))
-        .with(warp::reply::with::header("Access-Control-Allow-Origin", "*"))
-        .with(warp::reply::with::header("Access-Control-Allow-Methods", "GET, POST, OPTIONS"))
-        .with(warp::reply::with::header("Access-Control-Allow-Headers", "Content-Type, Origin, Accept"))
-        .with(warp::reply::with::header("Access-Control-Max-Age", "86400"));
-    let opt_auth = warp::path!("api" / "auth-status").and(warp::options())
-        .map(|| warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT))
-        .with(warp::reply::with::header("Access-Control-Allow-Origin", "*"))
-        .with(warp::reply::with::header("Access-Control-Allow-Methods", "GET, POST, OPTIONS"))
-        .with(warp::reply::with::header("Access-Control-Allow-Headers", "Content-Type, Origin, Accept"))
-        .with(warp::reply::with::header("Access-Control-Max-Age", "86400"));
-    let opt_set = warp::path!("api" / "set-auth").and(warp::options())
-        .map(|| warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT))
-        .with(warp::reply::with::header("Access-Control-Allow-Origin", "*"))
-        .with(warp::reply::with::header("Access-Control-Allow-Methods", "GET, POST, OPTIONS"))
-        .with(warp::reply::with::header("Access-Control-Allow-Headers", "Content-Type, Origin, Accept"))
-        .with(warp::reply::with::header("Access-Control-Max-Age", "86400"));
-    let opt_health = warp::path!("health").and(warp::options())
-        .map(|| warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT))
-        .with(warp::reply::with::header("Access-Control-Allow-Origin", "*"))
-        .with(warp::reply::with::header("Access-Control-Allow-Methods", "GET, POST, OPTIONS"))
-        .with(warp::reply::with::header("Access-Control-Allow-Headers", "Content-Type, Origin, Accept"))
-        .with(warp::reply::with::header("Access-Control-Max-Age", "86400"));
+    // OPTIONS 预检：直接返回带 CORS 头的 204，不经过 warp CORS 层（确保预检一定带上 Access-Control-Allow-Origin）
+    let opt_machine = warp::path!("api" / "machine-code").and(warp::options()).map(cors_preflight_response);
+    let opt_auth = warp::path!("api" / "auth-status").and(warp::options()).map(cors_preflight_response);
+    let opt_set = warp::path!("api" / "set-auth").and(warp::options()).map(cors_preflight_response);
+    let opt_health = warp::path!("health").and(warp::options()).map(cors_preflight_response);
 
     let machine_code = warp::path!("api" / "machine-code")
         .and(warp::get())
