@@ -159,24 +159,40 @@ async fn fetch_remote_content(url: String) -> Result<serde_json::Value, String> 
         .map_err(|e| format!("JSON解析失败: {}", e))
 }
 
+// 返回带 CORS 头的 OPTIONS 预检响应（确保跨域预检通过）
+fn cors_preflight_reply() -> impl warp::Reply {
+    use warp::http::StatusCode;
+    let reply = warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT);
+    warp::reply::with::header(
+        warp::reply::with::header(
+            warp::reply::with::header(
+                warp::reply::with::header(reply, "Access-Control-Allow-Origin", "*"),
+                "Access-Control-Allow-Methods", "GET, POST, OPTIONS",
+            ),
+            "Access-Control-Allow-Headers", "Content-Type, Origin, Accept",
+        ),
+        "Access-Control-Max-Age", "86400",
+    )
+}
+
 // HTTP服务器相关函数
 async fn start_http_server(state: Arc<Mutex<AppState>>) {
     use warp::http::StatusCode;
 
-    // CORS：允许跨域（页面在 xyst.dev.com 等，请求来自 localhost:18888 的预检 OPTIONS 需正确响应）
+    // CORS：允许跨域（页面在 xyst.dev.com 等访问 127.0.0.1:18888 时预检与正式请求均需 CORS 头）
     let cors = warp::cors()
         .allow_any_origin()
-        .allow_headers(vec!["content-type", "Content-Type", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"])
+        .allow_headers(vec!["content-type", "Content-Type", "Origin", "Accept", "Access-Control-Request-Method", "Access-Control-Request-Headers"])
         .allow_methods(vec!["GET", "POST", "OPTIONS"])
         .build();
 
     let state_filter = warp::any().map(move || state.clone());
 
-    // 显式处理 OPTIONS 预检，避免浏览器跨域报错
-    let opt_machine = warp::path!("api" / "machine-code").and(warp::options()).map(|| warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT));
-    let opt_auth = warp::path!("api" / "auth-status").and(warp::options()).map(|| warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT));
-    let opt_set = warp::path!("api" / "set-auth").and(warp::options()).map(|| warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT));
-    let opt_health = warp::path!("health").and(warp::options()).map(|| warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT));
+    // OPTIONS 预检：显式返回 CORS 头，避免“No 'Access-Control-Allow-Origin' header”报错
+    let opt_machine = warp::path!("api" / "machine-code").and(warp::options()).map(cors_preflight_reply);
+    let opt_auth = warp::path!("api" / "auth-status").and(warp::options()).map(cors_preflight_reply);
+    let opt_set = warp::path!("api" / "set-auth").and(warp::options()).map(cors_preflight_reply);
+    let opt_health = warp::path!("health").and(warp::options()).map(cors_preflight_reply);
 
     let machine_code = warp::path!("api" / "machine-code")
         .and(warp::get())
