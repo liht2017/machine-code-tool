@@ -49,8 +49,8 @@
         "title": "机器码获取工具",
         "width": 790,
         "height": 490,
-        "resizable": false,
-        "fullscreen": true,
+        "resizable": true,
+        "fullscreen": false,
         "center": true,
         "decorations": true
       }
