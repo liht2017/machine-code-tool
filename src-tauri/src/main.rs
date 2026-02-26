@@ -161,12 +161,22 @@ async fn fetch_remote_content(url: String) -> Result<serde_json::Value, String> 
 
 // HTTP服务器相关函数
 async fn start_http_server(state: Arc<Mutex<AppState>>) {
+    use warp::http::StatusCode;
+
+    // CORS：允许跨域（页面在 xyst.dev.com 等，请求来自 localhost:18888 的预检 OPTIONS 需正确响应）
     let cors = warp::cors()
         .allow_any_origin()
-        .allow_headers(vec!["content-type"])
-        .allow_methods(vec!["GET", "POST", "OPTIONS"]);
+        .allow_headers(vec!["content-type", "Content-Type", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"])
+        .allow_methods(vec!["GET", "POST", "OPTIONS"])
+        .build();
 
     let state_filter = warp::any().map(move || state.clone());
+
+    // 显式处理 OPTIONS 预检，避免浏览器跨域报错
+    let opt_machine = warp::path!("api" / "machine-code").and(warp::options()).map(|| warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT));
+    let opt_auth = warp::path!("api" / "auth-status").and(warp::options()).map(|| warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT));
+    let opt_set = warp::path!("api" / "set-auth").and(warp::options()).map(|| warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT));
+    let opt_health = warp::path!("health").and(warp::options()).map(|| warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT));
 
     let machine_code = warp::path!("api" / "machine-code")
         .and(warp::get())
@@ -190,8 +200,12 @@ async fn start_http_server(state: Arc<Mutex<AppState>>) {
 
     // 添加UTF-8编码头
     let utf8_header = warp::reply::with::header("content-type", "application/json; charset=utf-8");
-    
-    let routes = machine_code
+
+    let routes = opt_machine
+        .or(opt_auth)
+        .or(opt_set)
+        .or(opt_health)
+        .or(machine_code)
         .or(auth_status)
         .or(set_auth)
         .or(health)
