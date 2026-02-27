@@ -168,6 +168,8 @@ fn cors_preflight_response() -> warp::http::Response<Vec<u8>> {
         // 允许前端任意请求头（含 jc-gw-sign 等自定义头），避免预检被拒；非凭证请求可用 *
         .header("Access-Control-Allow-Headers", "*")
         .header("Access-Control-Max-Age", "86400")
+        // 允许“公网页面”访问“本地 localhost”（Chrome Private Network Access），解决麒麟/浏览器侧请求 18888 被拦截
+        .header("Access-Control-Allow-Private-Network", "true")
         .body(Vec::new())
         .expect("CORS preflight response build")
 }
@@ -213,6 +215,8 @@ async fn start_http_server(state: Arc<Mutex<AppState>>) {
 
     // 添加UTF-8编码头
     let utf8_header = warp::reply::with::header("content-type", "application/json; charset=utf-8");
+    // 允许公网页面访问本地 18888（Chrome Private Network Access），与预检中的 Access-Control-Allow-Private-Network 一致
+    let pna_header = warp::reply::with::header("Access-Control-Allow-Private-Network", "true");
 
     // 重要：OPTIONS 预检不经过 warp 的 cors 层，直接返回我们自己的带 CORS 头的 204，避免 warp 对 OPTIONS 的拦截/覆盖导致缺少 Access-Control-Allow-Origin
     let opt_routes = opt_machine.or(opt_auth).or(opt_set).or(opt_health);
@@ -221,6 +225,7 @@ async fn start_http_server(state: Arc<Mutex<AppState>>) {
         .or(set_auth)
         .or(health)
         .with(cors)
+        .with(pna_header)
         .with(utf8_header);
     let routes = opt_routes.or(api_routes);
 

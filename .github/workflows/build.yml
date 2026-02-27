@@ -60,6 +60,7 @@ jobs:
           -w /workspace \
           kylin-apt-builder:latest bash -c '
             set -e
+            export LANG=en_US.UTF-8
             cd /workspace/src-tauri
             mkdir -p icons
             ICONS_ABS="$(pwd)/icons"
@@ -103,7 +104,8 @@ jobs:
           '
         mkdir -p upload
         cp "$PROJ/src-tauri/machine-code-tool-kylin-apt.AppImage" upload/machine-code-tool-kylin.AppImage
-        cp "$PROJ/src-tauri/使用说明-麒麟-apt.txt" upload/使用说明.txt
+        # 使用英文文件名 README.txt 避免解压后中文文件名乱码（如 浣跨颗璇存槑.txt）
+        cp "$PROJ/src-tauri/使用说明-麒麟-apt.txt" upload/README.txt
         chmod +x upload/machine-code-tool-kylin.AppImage
         ls -la upload/
 
