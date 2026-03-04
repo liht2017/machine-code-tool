@@ -11,7 +11,6 @@ RUN apt-get update \
             ca-certificates curl wget file \
             build-essential pkg-config \
             libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
-            libsoup2.4-dev \
             libssl-dev libayatana-appindicator3-dev \
             libxdo-dev libjavascriptcoregtk-4.1-dev \
             imagemagick \
@@ -21,12 +20,26 @@ RUN apt-get update \
         ca-certificates curl wget file \
         build-essential pkg-config \
         libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
-        libsoup2.4-dev \
         libssl-dev libayatana-appindicator3-dev \
         libxdo-dev libjavascriptcoregtk-4.1-dev \
         imagemagick \
     && rm -rf /var/lib/apt/lists/* \
     && command -v gcc >/dev/null 2>&1 && command -v pkg-config >/dev/null 2>&1
+
+# Debian 未为 loong64 提供 libsoup2.4-dev，从源码构建 libsoup-2.4 供 soup2-sys 使用
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends meson ninja-build libglib2.0-dev libxml2-dev libsqlite3-dev libpsl-dev libbrotli-dev zlib1g-dev libnghttp2-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && cd /tmp \
+    && wget -q -L https://download.gnome.org/sources/libsoup/2.74/libsoup-2.74.3.tar.xz \
+    && tar xf libsoup-2.74.3.tar.xz && cd libsoup-2.74.3 \
+    && meson setup build --prefix=/usr/local -Dintrospection=disabled -Dvapi=disabled -Dsysprof=disabled \
+    && ninja -C build && ninja -C build install \
+    && cd / && rm -rf /tmp/libsoup-2.74.3* \
+    && echo /usr/local/lib > /etc/ld.so.conf.d/local.conf && ldconfig
+
+ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}"
+ENV LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
 
 # Rust + Tauri CLI 1.x（容器内为 loong64 原生构建）
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
