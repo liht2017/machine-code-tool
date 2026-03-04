@@ -1,19 +1,17 @@
 # 银河麒麟 龙芯版（LoongArch64）构建环境
 # 在 x86_64 主机上通过 QEMU 运行，用于产出龙芯（Loongson-3A6000 等）可用的 AppImage。
 # 平台由 buildx 传入，勿在 FROM 中写死 --platform。
-# 使用完整版镜像（非 slim），使 systemd 已预装并完成配置，避免在 QEMU 下运行 postinst 时段错误。
-FROM ghcr.io/loong64/debian:trixie
+# 使用 bookworm（Debian 12）稳定版，loong64 下依赖更一致，且 systemd 版本较老，QEMU 下 postinst 相对稳定。
+FROM ghcr.io/loong64/debian:bookworm
 ENV DEBIAN_FRONTEND=noninteractive
 
-# 先 hold systemd 相关包，避免 apt 升级时在 QEMU 下触发 postinst 段错误
 RUN apt-get update \
-    && for p in systemd systemd-sysv libsystemd0 libsystemd0t64; do apt-mark hold "$p" 2>/dev/null || true; done \
     && apt-get install -y --no-install-recommends \
         ca-certificates curl wget file \
         build-essential pkg-config \
-        libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
+        libwebkit2gtk-4.0-dev libgtk-3-dev librsvg2-dev \
         libssl-dev libayatana-appindicator3-dev \
-        libxdo-dev libjavascriptcoregtk-4.1-dev \
+        libxdo-dev libjavascriptcoregtk-4.0-dev \
         imagemagick \
     && rm -rf /var/lib/apt/lists/*
 
