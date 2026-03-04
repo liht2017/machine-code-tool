@@ -41,6 +41,13 @@ RUN apt-get update \
 ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}"
 ENV LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}"
 
+# Debian 未为 loong64 提供 libjavascriptcoregtk-4.0-dev，用 4.1 的 .pc 做垫片供 javascriptcore-rs-sys 使用
+RUN JSC41_PC=$(find /usr -name 'javascriptcoregtk-4.1.pc' 2>/dev/null | head -1) \
+    && [ -n "$JSC41_PC" ] \
+    && sed 's/4\.1/4.0/g;s/javascriptcoregtk-4\.1/javascriptcoregtk-4.0/g' "$JSC41_PC" > /usr/local/lib/pkgconfig/javascriptcoregtk-4.0.pc \
+    && sed -i 's/-ljavascriptcoregtk-4\.0/-ljavascriptcoregtk-4.1/g' /usr/local/lib/pkgconfig/javascriptcoregtk-4.0.pc \
+    && pkg-config --exists javascriptcoregtk-4.0 'javascriptcoregtk-4.0 >= 2.24'
+
 # Rust + Tauri CLI 1.x（容器内为 loong64 原生构建）
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
     && . /root/.cargo/env \
