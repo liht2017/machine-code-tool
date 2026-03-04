@@ -5,7 +5,7 @@
 FROM ghcr.io/loong64/debian:trixie
 ENV DEBIAN_FRONTEND=noninteractive
 
-# 在 QEMU 下 systemd 的 postinst 会段错误，先安装；若失败则用空脚本替换 postinst 再 dpkg --configure，使构建可继续
+# 在 QEMU 下 systemd 的 postinst 会段错误：先安装；失败则用空 postinst 再 dpkg --configure，不依赖末尾检查避免误报
 RUN apt-get update \
     && ( apt-get install -y --no-install-recommends \
             ca-certificates curl wget file \
@@ -17,7 +17,7 @@ RUN apt-get update \
         || ( [ -f /var/lib/dpkg/info/systemd.postinst ] && printf '%s\n' '#!/bin/sh' 'exit 0' > /var/lib/dpkg/info/systemd.postinst && chmod +x /var/lib/dpkg/info/systemd.postinst; dpkg --configure -a; true ) \
     ) \
     && rm -rf /var/lib/apt/lists/* \
-    && dpkg -l libwebkit2gtk-4.1-dev build-essential >/dev/null 2>&1
+    && ( command -v gcc >/dev/null 2>&1 && command -v pkg-config >/dev/null 2>&1 ) || ( echo "Missing gcc/pkg-config"; exit 1 )
 
 # Rust + Tauri CLI 1.x（容器内为 loong64 原生构建）
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
