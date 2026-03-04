@@ -278,3 +278,90 @@ jobs:
         name: ${{ matrix.asset_name }}
         path: upload/
         retention-days: 30
+
+  # 银河麒麟 龙芯版（LoongArch64），在 QEMU 中构建，供 Loongson-3A6000 等龙芯机器使用
+  build-kylin-loongarch64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 确定项目目录
+        id: project-dir
+        run: |
+          if [ -d "machine-code-tool/src-tauri" ]; then
+            echo "dir=machine-code-tool" >> $GITHUB_OUTPUT
+          else
+            echo "dir=." >> $GITHUB_OUTPUT
+          fi
+
+      - name: 启用 QEMU（loong64）
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/loong64
+
+      - name: 构建龙芯 Docker 镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.project-dir.outputs.dir }}
+          file: ${{ steps.project-dir.outputs.dir }}/.github/docker/Dockerfile.kylin-loongarch64
+          platforms: linux/loong64
+          push: false
+          load: true
+          tags: kylin-loongarch64-builder:latest
+
+      - name: 在龙芯容器内构建 AppImage
+        run: |
+          PROJ="${{ steps.project-dir.outputs.dir }}"
+          docker run --rm \
+            -v "$(pwd)/$PROJ:/workspace" \
+            -w /workspace \
+            kylin-loongarch64-builder:latest bash -c '
+            set -e
+            export LANG=en_US.UTF-8
+            cd /workspace/src-tauri
+            mkdir -p icons
+            ICONS_ABS="$(pwd)/icons"
+            SRC_ICON=""
+            [ -f "$ICONS_ABS/icon.png" ] && SRC_ICON="$ICONS_ABS/icon.png"
+            [ -z "$SRC_ICON" ] && [ -f "$ICONS_ABS/512x512.png" ] && SRC_ICON="$ICONS_ABS/512x512.png"
+            for s in 32 128 256 512; do
+              if [ -n "$SRC_ICON" ]; then
+                convert "$SRC_ICON" -resize ${s}x${s} -strip "PNG32:$ICONS_ABS/${s}x${s}.png"
+              elif [ -f "$ICONS_ABS/${s}x${s}.png" ]; then
+                convert "$ICONS_ABS/${s}x${s}.png" -strip "PNG32:$ICONS_ABS/${s}x${s}.png"
+              else
+                convert -size ${s}x${s} xc:none -fill "#4080ff" -draw "rectangle 0,0 $s,$s" -strip "PNG32:$ICONS_ABS/${s}x${s}.png"
+              fi
+            done
+            mkdir -p ../dist
+            [ ! -f ../dist/index.html ] && cp /workspace/.github/docker/kylin-fallback-index.html ../dist/index.html 2>/dev/null || true
+            [ ! -f ../dist/index.html ] && echo "<!DOCTYPE html><html><head><meta charset=\"utf-8\"/><title>机器码获取工具</title></head><body>Loading...</body></html>" > ../dist/index.html
+            cp tauri.conf.json tauri.conf.json.bak
+            sed -i "s/\"productName\":\"机器码获取工具\"/\"productName\":\"machine-code-tool\"/" tauri.conf.json
+            cargo tauri build --verbose
+            mv tauri.conf.json.bak tauri.conf.json 2>/dev/null || true
+            APPIMG=$(find target/release/bundle/appimage -maxdepth 1 -name "*.AppImage" -type f 2>/dev/null | head -1)
+            [ -z "$APPIMG" ] && echo "❌ 未找到 AppImage" && exit 1
+            cp "$APPIMG" machine-code-tool-kylin-loongarch64.AppImage
+            chmod +x machine-code-tool-kylin-loongarch64.AppImage
+            echo "🐧 机器码获取工具 - 银河麒麟 龙芯版（LoongArch64）" > README-loongarch64.txt
+            echo "=======================================" >> README-loongarch64.txt
+            echo "" >> README-loongarch64.txt
+            echo "🎉 适用于麒麟 V10 龙芯平台（如 Loongson-3A6000），单文件 AppImage。" >> README-loongarch64.txt
+            echo "   请在终端执行 uname -m 确认为 loongarch64 后使用。" >> README-loongarch64.txt
+            echo "" >> README-loongarch64.txt
+            echo "💻 使用：chmod +x machine-code-tool-kylin-loongarch64.AppImage 后双击或命令行运行。" >> README-loongarch64.txt
+            echo "✨ 功能：获取机器硬件信息，提供投标API服务 | 📝 版本：2.1.0" >> README-loongarch64.txt
+            '
+          mkdir -p upload
+          cp "$PROJ/src-tauri/machine-code-tool-kylin-loongarch64.AppImage" upload/
+          cp "$PROJ/src-tauri/README-loongarch64.txt" upload/README.txt
+          chmod +x upload/machine-code-tool-kylin-loongarch64.AppImage
+          ls -la upload/
+
+      - name: 上传龙芯构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: machine-code-tool-kylin-loongarch64
+          path: upload/
+          retention-days: 30

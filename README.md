@@ -15,7 +15,7 @@
 
 - **Windows**: 7 SP1 及以上，32/64 位
 - **macOS**: 10.13 及以上
-- **银河麒麟 / Linux**: 麒麟 V10 或 Ubuntu 20.04 等，glibc 2.31+，x86_64。AppImage 单文件免安装，通常无需额外装 WebKit。
+- **银河麒麟 / Linux**: 麒麟 V10 或 Ubuntu 20.04 等，glibc 2.31+。**x86_64** 请用 **machine-code-tool-kylin**；**龙芯（LoongArch64，如 Loongson-3A6000）** 请用 **machine-code-tool-kylin-loongarch64**。AppImage 单文件免安装，通常无需额外装 WebKit。
 
 ## 获取安装包
 
@@ -24,7 +24,8 @@
 1. 打开本仓库 **Actions** → 选择 workflow「构建机器码获取工具」
 2. **Run workflow**（或 push 到 main/master 自动触发）
 3. 运行完成后进入该次 run → **Artifacts** 下载对应平台：
-   - **machine-code-tool-kylin**：银河麒麟 / Linux（AppImage + 使用说明）
+   - **machine-code-tool-kylin**：银河麒麟 / Linux（x86_64，AppImage + 使用说明）
+   - **machine-code-tool-kylin-loongarch64**：银河麒麟 龙芯版（LoongArch64，如 Loongson-3A6000）
    - **machine-code-tool-macos**：macOS 通用版
    - **machine-code-tool-windows**：Windows 64 位
    - **machine-code-tool-windows-32**：Windows 32 位
@@ -35,7 +36,8 @@
 
 - **Windows**: 双击 `.exe` 运行
 - **macOS**: 双击通用二进制运行；若提示“来自身份不明的开发者”，右键 → 打开
-- **银河麒麟 / Linux**: `chmod +x *.AppImage` 后双击或 `./machine-code-tool-kylin.AppImage`。若终端出现 AT-SPI 警告，可忽略或使用 `NO_AT_BRIDGE=1 ./machine-code-tool-kylin.AppImage`
+- **银河麒麟 / Linux（x86_64）**: `chmod +x machine-code-tool-kylin.AppImage` 后双击或 `./machine-code-tool-kylin.AppImage`。
+- **银河麒麟 龙芯版（LoongArch64）**: 下载 **machine-code-tool-kylin-loongarch64** 产物，`chmod +x machine-code-tool-kylin-loongarch64.AppImage` 后双击或命令行运行。若终端出现 AT-SPI 警告，可忽略或使用 `NO_AT_BRIDGE=1 ./machine-code-tool-kylin-loongarch64.AppImage`。
 
 ## API 接口
 
@@ -63,7 +65,8 @@
 
 - **端口 18888 被占用**：修改配置文件中的 `port` 或关闭占用程序
 - **获取硬件信息失败**：确认已点击「开启授权」；Windows 可尝试管理员权限
-- **麒麟 / Linux 报 GLIBC_2.xx not found**：当前 Linux 包在 Ubuntu 20.04 环境构建，需 glibc 2.31+；麒麟 V10 一般满足
+- **麒麟 / Linux 报 GLIBC_2.xx not found**：当前 Linux 包在 Ubuntu 20.04 / Debian 环境构建，需 glibc 2.31+；麒麟 V10 一般满足
+- **麒麟龙芯机器报「无法执行二进制文件：可执行文件格式错误」**：请下载 **machine-code-tool-kylin-loongarch64** 产物（龙芯专用），不要使用 machine-code-tool-kylin（仅 x86_64）
 
 ## 版权与支持
 
