@@ -339,6 +339,13 @@ jobs:
               sed "s/4\\.1/4.0/g;s/webkit2gtk-4\\.1/webkit2gtk-4.0/g" "$WEBKIT41_PC" > /usr/local/lib/pkgconfig/webkit2gtk-4.0.pc
               sed -i "s/-lwebkit2gtk-4\\.0/-lwebkit2gtk-4.1/g" /usr/local/lib/pkgconfig/webkit2gtk-4.0.pc
             fi
+            # 链接器仍会解析 -lwebkit2gtk-4.0 / -ljavascriptcoregtk-4.0，需提供 libXXX-4.0.so 符号链接指向 4.1
+            for dir in /usr/local/lib/loongarch64-linux-gnu /usr/local/lib/loong64-linux-gnu; do mkdir -p "$dir"; done
+            W41=$(find /usr/lib -name "libwebkit2gtk-4.1.so*" 2>/dev/null | head -1)
+            J41=$(find /usr/lib -name "libjavascriptcoregtk-4.1.so*" 2>/dev/null | head -1)
+            [ -n "$W41" ] && ln -sf "$W41" /usr/local/lib/loongarch64-linux-gnu/libwebkit2gtk-4.0.so && ln -sf "$W41" /usr/local/lib/loong64-linux-gnu/libwebkit2gtk-4.0.so 2>/dev/null || true
+            [ -n "$J41" ] && ln -sf "$J41" /usr/local/lib/loongarch64-linux-gnu/libjavascriptcoregtk-4.0.so && ln -sf "$J41" /usr/local/lib/loong64-linux-gnu/libjavascriptcoregtk-4.0.so 2>/dev/null || true
+            export LIBRARY_PATH=/usr/local/lib/loongarch64-linux-gnu:/usr/local/lib/loong64-linux-gnu:${LIBRARY_PATH:-}
             cd /workspace/src-tauri
             mkdir -p icons
             ICONS_ABS="$(pwd)/icons"
