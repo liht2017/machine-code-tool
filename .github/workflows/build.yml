@@ -313,11 +313,24 @@ jobs:
         run: |
           PROJ="${{ steps.project-dir.outputs.dir }}"
           docker run --rm \
+            -e PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib/loong64-linux-gnu/pkgconfig \
+            -e LD_LIBRARY_PATH=/usr/local/lib:/usr/lib/loong64-linux-gnu \
             -v "$(pwd)/$PROJ:/workspace" \
             -w /workspace \
             kylin-loongarch64-builder:latest bash -c '
             set -e
             export LANG=en_US.UTF-8
+            export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib/loong64-linux-gnu/pkgconfig
+            export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib/loong64-linux-gnu
+            # 每次构建前确保 javascriptcoregtk-4.0.pc 垫片存在（镜像层可能被缓存未包含）
+            mkdir -p /usr/local/lib/pkgconfig
+            JSC41_PC=""
+            for p in /usr/lib/loong64-linux-gnu/pkgconfig/javascriptcoregtk-4.1.pc /usr/lib/pkgconfig/javascriptcoregtk-4.1.pc; do [ -f "$p" ] && JSC41_PC="$p" && break; done
+            [ -z "$JSC41_PC" ] && JSC41_PC=$(find /usr -name javascriptcoregtk-4.1.pc 2>/dev/null | head -1)
+            if [ -n "$JSC41_PC" ]; then
+              sed "s/4\\.1/4.0/g;s/javascriptcoregtk-4\\.1/javascriptcoregtk-4.0/g" "$JSC41_PC" > /usr/local/lib/pkgconfig/javascriptcoregtk-4.0.pc
+              sed -i "s/-ljavascriptcoregtk-4\\.0/-ljavascriptcoregtk-4.1/g" /usr/local/lib/pkgconfig/javascriptcoregtk-4.0.pc
+            fi
             cd /workspace/src-tauri
             mkdir -p icons
             ICONS_ABS="$(pwd)/icons"
