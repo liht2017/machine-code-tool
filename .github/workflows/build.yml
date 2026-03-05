@@ -308,6 +308,7 @@ jobs:
           push: false
           load: true
           tags: kylin-loongarch64-builder:latest
+          no-cache: true
 
       - name: 在龙芯容器内构建 AppImage
         run: |

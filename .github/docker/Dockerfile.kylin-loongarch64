@@ -41,7 +41,7 @@ RUN apt-get update \
 ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
 ENV LD_LIBRARY_PATH="/usr/local/lib"
 
-# javascriptcoregtk-4.0.pc 垫片由 workflow 内构建脚本在运行时创建，此处仅确保目录存在
+# javascriptcoregtk-4.0.pc 垫片由 workflow 内构建脚本在运行时创建，此处仅确保目录存在（勿恢复为 for/sed 长 RUN）
 RUN mkdir -p /usr/local/lib/pkgconfig
 
 # Rust + Tauri CLI 1.x（容器内为 loong64 原生构建）
