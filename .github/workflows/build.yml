@@ -323,7 +323,7 @@ jobs:
             export LANG=en_US.UTF-8
             export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib/loong64-linux-gnu/pkgconfig
             export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib/loong64-linux-gnu
-            # 每次构建前确保 javascriptcoregtk-4.0.pc 垫片存在（镜像层可能被缓存未包含）
+            # 每次构建前确保 4.0 垫片存在（loong64 仅有 4.1，webkit2gtk-sys / javascriptcore-rs-sys 需要 4.0）
             mkdir -p /usr/local/lib/pkgconfig
             JSC41_PC=""
             for p in /usr/lib/loong64-linux-gnu/pkgconfig/javascriptcoregtk-4.1.pc /usr/lib/pkgconfig/javascriptcoregtk-4.1.pc; do [ -f "$p" ] && JSC41_PC="$p" && break; done
@@ -331,6 +331,13 @@ jobs:
             if [ -n "$JSC41_PC" ]; then
               sed "s/4\\.1/4.0/g;s/javascriptcoregtk-4\\.1/javascriptcoregtk-4.0/g" "$JSC41_PC" > /usr/local/lib/pkgconfig/javascriptcoregtk-4.0.pc
               sed -i "s/-ljavascriptcoregtk-4\\.0/-ljavascriptcoregtk-4.1/g" /usr/local/lib/pkgconfig/javascriptcoregtk-4.0.pc
+            fi
+            WEBKIT41_PC=""
+            for p in /usr/lib/loong64-linux-gnu/pkgconfig/webkit2gtk-4.1.pc /usr/lib/pkgconfig/webkit2gtk-4.1.pc; do [ -f "$p" ] && WEBKIT41_PC="$p" && break; done
+            [ -z "$WEBKIT41_PC" ] && WEBKIT41_PC=$(find /usr -name webkit2gtk-4.1.pc 2>/dev/null | head -1)
+            if [ -n "$WEBKIT41_PC" ]; then
+              sed "s/4\\.1/4.0/g;s/webkit2gtk-4\\.1/webkit2gtk-4.0/g" "$WEBKIT41_PC" > /usr/local/lib/pkgconfig/webkit2gtk-4.0.pc
+              sed -i "s/-lwebkit2gtk-4\\.0/-lwebkit2gtk-4.1/g" /usr/local/lib/pkgconfig/webkit2gtk-4.0.pc
             fi
             cd /workspace/src-tauri
             mkdir -p icons
