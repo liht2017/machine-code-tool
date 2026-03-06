@@ -366,6 +366,13 @@ jobs:
             [ ! -f ../dist/index.html ] && echo "<!DOCTYPE html><html><head><meta charset=\"utf-8\"/><title>机器码获取工具</title></head><body>Loading...</body></html>" > ../dist/index.html
             cp tauri.conf.json tauri.conf.json.bak
             sed -i "s/\"productName\":\"机器码获取工具\"/\"productName\":\"machine-code-tool\"/" tauri.conf.json
+            # 拉取依赖并触发解压；对 wry 打补丁：龙芯镜像中 webkit2gtk 将 set_enable_webgl 等放在 SettingsExt 中，需显式 use
+            cargo fetch --target loongarch64-unknown-linux-gnu
+            cargo build -p wry --target loongarch64-unknown-linux-gnu 2>/dev/null || true
+            WRY_MOD=$(find /root/.cargo/registry/src -path "*/wry-*/src/webview/webkitgtk/mod.rs" 2>/dev/null | head -1)
+            if [ -n "$WRY_MOD" ] && [ -f "$WRY_MOD" ]; then
+              grep -q "SettingsExt" "$WRY_MOD" || sed -i "5i use webkit2gtk::SettingsExt;" "$WRY_MOD"
+            fi
             # Tauri 1.x bundler 不支持 loongarch64，用 --bundles none 只构建二进制，避免 "Unable to determine target-architecture"
             cargo tauri build --target loongarch64-unknown-linux-gnu --bundles none --verbose
             mv tauri.conf.json.bak tauri.conf.json 2>/dev/null || true
