@@ -347,6 +347,7 @@ jobs:
             [ -n "$J41" ] && ln -sf "$J41" /usr/local/lib/loongarch64-linux-gnu/libjavascriptcoregtk-4.0.so && ln -sf "$J41" /usr/local/lib/loong64-linux-gnu/libjavascriptcoregtk-4.0.so 2>/dev/null || true
             export LIBRARY_PATH=/usr/local/lib/loongarch64-linux-gnu:/usr/local/lib/loong64-linux-gnu:${LIBRARY_PATH:-}
             cd /workspace/src-tauri
+            sed -i "/^[[:space:]]*use warp::http::StatusCode;[[:space:]]*$/d" src/main.rs 2>/dev/null || true
             mkdir -p icons
             ICONS_ABS="$(pwd)/icons"
             SRC_ICON=""
@@ -376,8 +377,16 @@ jobs:
             # Tauri 1.x bundler 不支持 loongarch64，用 --bundles none 只构建二进制，避免 "Unable to determine target-architecture"
             cargo tauri build --target loongarch64-unknown-linux-gnu --bundles none --verbose
             mv tauri.conf.json.bak tauri.conf.json 2>/dev/null || true
-            BIN=target/loongarch64-unknown-linux-gnu/release/machine-code-tool
-            [ ! -f "$BIN" ] && echo "❌ 未找到二进制 $BIN" && exit 1
+            RELEASE_DIR=target/loongarch64-unknown-linux-gnu/release
+            BIN=$RELEASE_DIR/machine-code-tool
+            if [ ! -f "$BIN" ]; then
+              BIN=$(find "$RELEASE_DIR" -maxdepth 1 -type f -executable ! -name "*.rlib" ! -name "*.d" ! -name "*.so" 2>/dev/null | head -1)
+            fi
+            if [ -z "$BIN" ] || [ ! -f "$BIN" ]; then
+              echo "❌ 未找到二进制，$RELEASE_DIR 内容："
+              ls -la "$RELEASE_DIR" 2>/dev/null || true
+              exit 1
+            fi
             cp "$BIN" machine-code-tool-kylin-loongarch64
             chmod +x machine-code-tool-kylin-loongarch64
             echo "🐧 机器码获取工具 - 银河麒麟 龙芯版（LoongArch64）" > README-loongarch64.txt
