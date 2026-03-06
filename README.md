@@ -15,7 +15,7 @@
 
 - **Windows**: 7 SP1 及以上，32/64 位
 - **macOS**: 10.13 及以上
-- **银河麒麟 / Linux**: 麒麟 V10 或 Ubuntu 20.04 等，glibc 2.31+。**x86_64** 请用 **machine-code-tool-kylin**；**龙芯（LoongArch64，如 Loongson-3A6000）** 请用 **machine-code-tool-kylin-loongarch64**。AppImage 单文件免安装，通常无需额外装 WebKit。
+- **银河麒麟 / Linux**: 麒麟 V10 或 Ubuntu 20.04 等，glibc 2.31+。**x86_64** 请用 **machine-code-tool-kylin**（AppImage）；**龙芯（LoongArch64，如 Loongson-3A6000）** 请用 **machine-code-tool-kylin-loongarch64**（二进制，因 Tauri 1.x 打包器不支持该架构故不提供 AppImage）。
 
 ## 获取安装包
 
@@ -25,7 +25,7 @@
 2. **Run workflow**（或 push 到 main/master 自动触发）
 3. 运行完成后进入该次 run → **Artifacts** 下载对应平台：
    - **machine-code-tool-kylin**：银河麒麟 / Linux（x86_64，AppImage + 使用说明）
-   - **machine-code-tool-kylin-loongarch64**：银河麒麟 龙芯版（LoongArch64，如 Loongson-3A6000）
+   - **machine-code-tool-kylin-loongarch64**：银河麒麟 龙芯版（LoongArch64，二进制 + 使用说明）
    - **machine-code-tool-macos**：macOS 通用版
    - **machine-code-tool-windows**：Windows 64 位
    - **machine-code-tool-windows-32**：Windows 32 位
@@ -37,7 +37,7 @@
 - **Windows**: 双击 `.exe` 运行
 - **macOS**: 双击通用二进制运行；若提示“来自身份不明的开发者”，右键 → 打开
 - **银河麒麟 / Linux（x86_64）**: `chmod +x machine-code-tool-kylin.AppImage` 后双击或 `./machine-code-tool-kylin.AppImage`。
-- **银河麒麟 龙芯版（LoongArch64）**: 下载 **machine-code-tool-kylin-loongarch64** 产物，`chmod +x machine-code-tool-kylin-loongarch64.AppImage` 后双击或命令行运行。若终端出现 AT-SPI 警告，可忽略或使用 `NO_AT_BRIDGE=1 ./machine-code-tool-kylin-loongarch64.AppImage`。
+- **银河麒麟 龙芯版（LoongArch64）**: 下载 **machine-code-tool-kylin-loongarch64** 产物，`chmod +x machine-code-tool-kylin-loongarch64` 后双击或 `./machine-code-tool-kylin-loongarch64` 运行。若终端出现 AT-SPI 警告，可忽略或使用 `NO_AT_BRIDGE=1 ./machine-code-tool-kylin-loongarch64`。
 
 ## API 接口
 

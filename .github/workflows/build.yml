@@ -310,7 +310,7 @@ jobs:
           tags: kylin-loongarch64-builder:latest
           no-cache: true
 
-      - name: 在龙芯容器内构建 AppImage
+      - name: 在龙芯容器内构建二进制（跳过 AppImage，规避 bundler 无法识别 loongarch64）
         run: |
           PROJ="${{ steps.project-dir.outputs.dir }}"
           docker run --rm \
@@ -366,25 +366,26 @@ jobs:
             [ ! -f ../dist/index.html ] && echo "<!DOCTYPE html><html><head><meta charset=\"utf-8\"/><title>机器码获取工具</title></head><body>Loading...</body></html>" > ../dist/index.html
             cp tauri.conf.json tauri.conf.json.bak
             sed -i "s/\"productName\":\"机器码获取工具\"/\"productName\":\"machine-code-tool\"/" tauri.conf.json
-            cargo tauri build --verbose
+            # Tauri 1.x bundler 不支持 loongarch64，用 --bundles none 只构建二进制，避免 "Unable to determine target-architecture"
+            cargo tauri build --target loongarch64-unknown-linux-gnu --bundles none --verbose
             mv tauri.conf.json.bak tauri.conf.json 2>/dev/null || true
-            APPIMG=$(find target/release/bundle/appimage -maxdepth 1 -name "*.AppImage" -type f 2>/dev/null | head -1)
-            [ -z "$APPIMG" ] && echo "❌ 未找到 AppImage" && exit 1
-            cp "$APPIMG" machine-code-tool-kylin-loongarch64.AppImage
-            chmod +x machine-code-tool-kylin-loongarch64.AppImage
+            BIN=target/loongarch64-unknown-linux-gnu/release/machine-code-tool
+            [ ! -f "$BIN" ] && echo "❌ 未找到二进制 $BIN" && exit 1
+            cp "$BIN" machine-code-tool-kylin-loongarch64
+            chmod +x machine-code-tool-kylin-loongarch64
             echo "🐧 机器码获取工具 - 银河麒麟 龙芯版（LoongArch64）" > README-loongarch64.txt
             echo "=======================================" >> README-loongarch64.txt
             echo "" >> README-loongarch64.txt
-            echo "🎉 适用于麒麟 V10 龙芯平台（如 Loongson-3A6000），单文件 AppImage。" >> README-loongarch64.txt
+            echo "🎉 适用于麒麟 V10 龙芯平台（如 Loongson-3A6000），二进制版本。" >> README-loongarch64.txt
             echo "   请在终端执行 uname -m 确认为 loongarch64 后使用。" >> README-loongarch64.txt
             echo "" >> README-loongarch64.txt
-            echo "💻 使用：chmod +x machine-code-tool-kylin-loongarch64.AppImage 后双击或命令行运行。" >> README-loongarch64.txt
+            echo "💻 使用：chmod +x machine-code-tool-kylin-loongarch64 后双击或命令行运行。" >> README-loongarch64.txt
             echo "✨ 功能：获取机器硬件信息，提供投标API服务 | 📝 版本：2.1.0" >> README-loongarch64.txt
             '
           mkdir -p upload
-          cp "$PROJ/src-tauri/machine-code-tool-kylin-loongarch64.AppImage" upload/
+          cp "$PROJ/src-tauri/machine-code-tool-kylin-loongarch64" upload/
           cp "$PROJ/src-tauri/README-loongarch64.txt" upload/README.txt
-          chmod +x upload/machine-code-tool-kylin-loongarch64.AppImage
+          chmod +x upload/machine-code-tool-kylin-loongarch64
           ls -la upload/
 
       - name: 上传龙芯构建产物
